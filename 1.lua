@@ -3114,19 +3114,41 @@ pcall(function()
 end)
 
 -- ==================== WELCOME POPUP ====================
+-- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
+-- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
+-- ==================== WELCOME POPUP (SYMBOLS ONLY) ====================
+-- ==================== WELCOME POPUP (ULTIMATE PRO) ====================
 function _G.TryShowWelcome()
     pcall(function()
-        local CommonMsgBoxMgr = require("client.slua.logic.common.logic_common_msg_box")
-        if not CommonMsgBoxMgr then return end
-        local activeStatus = "DRAVIX ENGINE Menu & Status\n"
-        activeStatus = activeStatus .. "\nWeapon Skins: Active"
-        activeStatus = activeStatus .. "\nKill Counter: Active"
-        activeStatus = activeStatus .. "\nOutfit Skins: Active"
-        activeStatus = activeStatus .. "\nLobby Theme: Active"
-        activeStatus = activeStatus .. "\nDeadBox Skins: Active"
-        activeStatus = activeStatus .. "\nVehicle Skins: Active"
-        activeStatus = activeStatus .. "\n\nConfigure your values in config.ini and changes will apply automatically without UI hooks.\n\nEnjoy DravixEngine!"
-        CommonMsgBoxMgr.Show(1, "DRAVIX ENGINE MENU", activeStatus, function() end)
+        local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
+        if not Msg then Msg = require("client.slua.logic.common.logic_common_msg_box") end
+        local Web = require("client.slua.logic.url.logic_webview_sdk")
+        local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
+        if Msg and Msg.Show then
+            Msg.Show(4, ">> TRNDRAVIX ELITE ULTIMATE <<",
+            "\n===========================================\n" ..
+            "     ◆  HYBRID ENGINE v4.0  ◆\n" ..
+            "===========================================\n" ..
+            "\n  [ STATUS ]  >>  ONLINE / UNDETECTED\n" ..
+            "  [ DEV ]     >>  @TrnDravix\n" ..
+            "  [ SHIELD ]  >>  5-Layer Deep Protection\n" ..
+            "\n-------------------------------------------\n" ..
+            "  ▶  FEATURES ACTIVATED :\n" ..
+            "      - ESP + Wallhack (Full Vision)\n" ..
+            "      - Aimbot + No Recoil (Precision)\n" ..
+            "      - 165 FPS + No Grass (Performance)\n" ..
+            "      - iPad View + Anti-Ban (Safety)\n" ..
+            "      - Full Visual Cleanup (Clarity)\n" ..
+            "\n-------------------------------------------\n" ..
+            "  ▶  SYSTEM STATUS :\n" ..
+            "      - Zero Lag Mode : Active\n" ..
+            "      - Memory Cleaner : Running\n" ..
+            "      - Anti-Cheat Bypass : Enabled\n" ..
+            "\n===========================================\n" ..
+            "  >>  PREMIUM BUILD LOADED SUCCESSFULLY  <<\n" ..
+            "===========================================\n" ..
+            "  [ Tap anywhere to connect with Developer ]", onClick)
+        end
         _G.WelcomeShown = true
     end)
 end
