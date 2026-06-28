@@ -1,5 +1,6 @@
 -- MODDED BY ADITYA_ORG
 -- ✅ BYPASS ADDED FROM TrnDravix ELITE ULTIMATE (5‑Layer Shield + CRC Faker + Network Blocker)
+-- ✅ Extra patches: Gokuba, HostedProto, AntiCheatSubsystem, Welcome Popup
 
 -- Per-match guard: allow re-init when the player controller changes (new match)
 do
@@ -2219,6 +2220,48 @@ local function safeSelfHeal()
         end
     end)
 end
+
+-- ==================== EXTRA BYPASS: GOKUBA LOGIC ====================
+pcall(function()
+    local Gokuba = _G.GokubaLogic or package.loaded["GokubaLogic"]
+    if Gokuba then
+        Gokuba.ForwardFeature = function() return end
+        Gokuba.InitGokubaLogic = function() return end
+    end
+    if _G.NetUtil and _G.NetUtil.SendPkg then
+        local origSendPkg = _G.NetUtil.SendPkg
+        _G.NetUtil.SendPkg = function(packetName, ...)
+            if packetName == "battle_client_sync_allstar_auth_check_result_req" then
+                return
+            end
+            return origSendPkg(packetName, ...)
+        end
+    end
+end)
+
+-- ==================== EXTRA BYPASS: HOSTED PROTO ====================
+pcall(function()
+    local HostedProto = _G.HostedProtoConfig or package.loaded["HostedProtoConfig"]
+    if HostedProto and HostedProto.Proto then
+        if HostedProto.Proto.NationalEsportsSecurityCheck then
+            HostedProto.Proto.NationalEsportsSecurityCheck.func = "noop"
+        end
+    end
+end)
+
+-- ==================== EXTRA BYPASS: ANTI-CHEAT SUBSYSTEM ====================
+pcall(function()
+    local AC_Subsystem = _G.AntiCheatSubsystem or package.loaded["GameLua.Mod.BaseMod.Client.Security.AntiCheatSubsystem"]
+    if AC_Subsystem then
+        AC_Subsystem.OnInit = function() return end
+        AC_Subsystem.OnTick = function() return end
+        AC_Subsystem.CheckAbnormalStatus = function() return false end
+        AC_Subsystem.ReportSecurityData = function() return end
+        AC_Subsystem.OnDetectionResult = function() return end
+        AC_Subsystem.TriggerSafetyScan = function() return end
+    end
+end)
+
 -- ==================== END OF BYPASS ENGINE ====================
 
 -- ==================== ORIGINAL FILE A CODE (features) ====================
@@ -3067,5 +3110,25 @@ pcall(function()
     if _G.TssSDK then
         _G.TssSDK.Init = noop; _G.TssSDK.Start = noop; _G.TssSDK.Verify = retTrue; _G.TssSDK.CheckIntegrity = retTrue; _G.TssSDK.Check = retTrue
     end
-    print("[BYPASS] ✅ 5‑Layer Shield + CRC Faker + Network Blocker Active")
+    print("[BYPASS] ✅ 5‑Layer Shield + CRC Faker + Network Blocker + Extra Patches Active")
 end)
+
+-- ==================== WELCOME POPUP ====================
+function _G.TryShowWelcome()
+    pcall(function()
+        local CommonMsgBoxMgr = require("client.slua.logic.common.logic_common_msg_box")
+        if not CommonMsgBoxMgr then return end
+        local activeStatus = "DRAVIX ENGINE Menu & Status\n"
+        activeStatus = activeStatus .. "\nWeapon Skins: Active"
+        activeStatus = activeStatus .. "\nKill Counter: Active"
+        activeStatus = activeStatus .. "\nOutfit Skins: Active"
+        activeStatus = activeStatus .. "\nLobby Theme: Active"
+        activeStatus = activeStatus .. "\nDeadBox Skins: Active"
+        activeStatus = activeStatus .. "\nVehicle Skins: Active"
+        activeStatus = activeStatus .. "\n\nConfigure your values in config.ini and changes will apply automatically without UI hooks.\n\nEnjoy DravixEngine!"
+        CommonMsgBoxMgr.Show(1, "DRAVIX ENGINE MENU", activeStatus, function() end)
+        _G.WelcomeShown = true
+    end)
+end
+
+pcall(_G.TryShowWelcome)
