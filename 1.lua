@@ -3284,75 +3284,43 @@ _G.InitModMenuTab = function()
             }
         }
 
-        SettingPageDefine.ModMenu = {
-    Key = "ModMenu",
-    loc = "ADITYA_ORG MENU",
-    UIKey = "Setting_Page_Privacy",
-    Category = {
-        {
-            Key = "ModMenu_Main",
-            loc = "ALL FEATURES",
-            Stack = ModMenuStack
-        },
-        -- NAYA SECTION (MOVEMENT MODS) - YAHAN DAALO ✅
-        {
-            Key = "ModMenu_Movement",
-            loc = "MOVEMENT MODS",
-            Stack = {
+SettingPageDefine.ModMenu = {
+            Key = "ModMenu",
+            loc = "ADITYA_ORG MENU",
+            UIKey = "Setting_Page_Privacy",
+            Category = {
                 {
-                    Key = "ModMenu_SpeedBoost",
-                    UI = AliasMap.TitleSwitcher,
-                    Text = "SPEED BOOST",
-                    GetFunc = function() return _G.Mod_SpeedBoost_Enabled or false end,
-                    SetFunc = function(_, value)
-                        SetSpeedBoost(value)
-                        return true
-                    end
-                },
-                {
-                    Key = "ModMenu_SpeedPercent",
-                    UI = AliasMap.Slider,
-                    Text = "SPEED PERCENT (100-500%)",
-                    Min = 100,
-                    Max = 500,
-                    Step = 10,
-                    IsPercent = false,
-                    GetFunc = function() return _G.Mod_SpeedBoost_Percent or 250 end,
-                    SetFunc = function(_, value)
-                        SetSpeedPercent(value)
-                        return true
-                    end
+                    Key = "ModMenu_Main",
+                    loc = "ALL FEATURES",
+                    Stack = ModMenuStack
                 }
             }
         }
-    }
-           } -- SettingPageDefine.ModMenu close
 
         table.insert(SettingCatalog, SettingPageDefine.ModMenu)
-    end -- closes 'if not SettingPageDefine.ModMenu then'
-end -- closes '_G.InitModMenuTab = function()'
+    end
 
--- ==================== UIMANAGER HOOK (MENU INJECTION) ====================
-local UIManager = _G.UIManager
-if UIManager and not UIManager._IsModMenuHooked then
-    local old_ShowUI = UIManager.ShowUI
-    UIManager.ShowUI = function(config, ...)
-        local args = {...}
-        if config and config.keyName and (string.find(string.lower(config.keyName), "setting_main") or string.find(string.lower(config.keyName), "setting")) then
-            local catalog = args[1]
-            if catalog and (type(catalog) == "table" or type(catalog) == "userdata") then
-                local hasModMenu = false
-                local newCatalog = {}
-                for _, page in ipairs(catalog) do
-                    table.insert(newCatalog, page)
-                    if page.Key == "ModMenu" then
-                        hasModMenu = true
+    local UIManager = _G.UIManager
+    if UIManager and not UIManager._IsModMenuHooked then
+        local old_ShowUI = UIManager.ShowUI
+        UIManager.ShowUI = function(config, ...)
+            local args = {...}
+            if config and config.keyName and (string.find(string.lower(config.keyName), "setting_main") or string.find(string.lower(config.keyName), "setting")) then
+                local catalog = args[1]
+                if catalog and (type(catalog) == "table" or type(catalog) == "userdata") then
+                    local hasModMenu = false
+                    local newCatalog = {}
+                    for _, page in ipairs(catalog) do
+                        table.insert(newCatalog, page)
+                        if page.Key == "ModMenu" then
+                            hasModMenu = true
+                        end
                     end
-                end
 
-                if not hasModMenu then
-                    table.insert(newCatalog, SettingPageDefine.ModMenu)
-                    args[1] = newCatalog
+                    if not hasModMenu then
+                        table.insert(newCatalog, SettingPageDefine.ModMenu)
+                        args[1] = newCatalog
+                    end
                 end
             end
             local table_unpack = table.unpack or unpack
@@ -3398,20 +3366,17 @@ end)
 -- ==================== WELCOME POPUP ====================
 function _G.TryShowWelcome()
     pcall(function()
-        local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
-        if not Msg then Msg = require("client.slua.logic.common.logic_common_msg_box") end
-        local Web = require("client.slua.logic.url.logic_webview_sdk")
-        local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
-        if Msg and Msg.Show then
-            Msg.Show(4, "» TrnDravix – ELITE ULTIMATE «",
-            "\n» Developer  : @TrnDravix\n" ..
-            "» Status     : ONLINE & ACTIVE\n" ..
-            "» Protection : 5-Layer Deep Shield\n" ..
-            "» Build      : PREMIUM LOADED\n\n" ..
-            "---------------------------------------\n" ..
-            "  [ Tap to Connect with Developer ]\n" ..
-            "---------------------------------------", onClick)
-        end
+        local CommonMsgBoxMgr = require("client.slua.logic.common.logic_common_msg_box")
+        if not CommonMsgBoxMgr then return end
+        local activeStatus = "DRAVIX ENGINE Menu & Status\n"
+        activeStatus = activeStatus .. "\nWeapon Skins: Active"
+        activeStatus = activeStatus .. "\nKill Counter: Active"
+        activeStatus = activeStatus .. "\nOutfit Skins: Active"
+        activeStatus = activeStatus .. "\nLobby Theme: Active"
+        activeStatus = activeStatus .. "\nDeadBox Skins: Active"
+        activeStatus = activeStatus .. "\nVehicle Skins: Active"
+        activeStatus = activeStatus .. "\n\nConfigure your values in config.ini and changes will apply automatically without UI hooks.\n\nEnjoy DravixEngine!"
+        CommonMsgBoxMgr.Show(1, "DRAVIX ENGINE MENU", activeStatus, function() end)
         _G.WelcomeShown = true
     end)
 end
