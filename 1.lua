@@ -2,7 +2,18 @@
 -- ✅ BYPASS ADDED FROM TrnDravix ELITE ULTIMATE (5‑Layer Shield + CRC Faker + Network Blocker)
 -- ✅ Extra patches: Gokuba, HostedProto, AntiCheatSubsystem, Welcome Popup
 
--- Per-match guard: allow re-init when the player controller changes (new match)
+-- ==================== PER-MATCH GUARD WITH AUTO-REINIT ====================
+do
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if _G._MOD_LOADED and _G._MOD_PC == pc then
+        pcall(_G.ReinitMod)
+        return
+    end
+    _G._MOD_LOADED = true
+    _G._MOD_PC = pc
+    pcall(_G.ReinitMod)
+end
+
 -- Initialize feature toggles with defaults
 if not _G.Mod_Aimbot_Enabled then _G.Mod_Aimbot_Enabled = false end
 if not _G.Mod_ESP_Enabled then _G.Mod_ESP_Enabled = false end
@@ -14,7 +25,7 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 -- Slider values for fine-tuning
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 
--- CHAMS color system (used by ESP)
+-- CHAMS color system
 if _G.Mod_Chams_GreenEnabled == nil then _G.Mod_Chams_GreenEnabled = false end
 if _G.Mod_Chams_YellowEnabled == nil then _G.Mod_Chams_YellowEnabled = false end
 if _G.Mod_Chams_GreenRGB == nil then _G.Mod_Chams_GreenRGB = {R=0, G=255, B=0, A=255} end
@@ -30,6 +41,7 @@ if _G.ESPConfig.RemoveWater == nil then _G.ESPConfig.RemoveWater = false end
 if _G.ESPConfig.ForceChinese == nil then _G.ESPConfig.ForceChinese = false end
 if _G.ESPConfig.RainEnabled == nil then _G.ESPConfig.RainEnabled = false end
 if _G.ESPConfig.SnowEnabled == nil then _G.ESPConfig.SnowEnabled = false end
+
 -- Skin toggle
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 
@@ -48,6 +60,17 @@ _G.KillData             = _G.KillData             or { kills = {} }
 _G.DeadBoxSkins         = _G.DeadBoxSkins         or {}
 _G.AlreadyChangedSet    = _G.AlreadyChangedSet    or {}
 _G.CurrentEquipVehicleID= _G.CurrentEquipVehicleID or 0
+
+-- Timer storage for cross-match cleanup
+_G.ModTimers = _G.ModTimers or {
+    esp = nil,
+    skin = nil,
+    aimbot = nil,
+    memory = nil,
+    features = nil,
+    watchdog = nil,
+    lastPc = nil,
+}
 
 -- ==================== BYPASS ENGINE (copied from TrnDravix) ====================
 if _G._BYPASS_LOADED then return end
@@ -2533,51 +2556,49 @@ local function ReadLiveConfig()
                     elseif k == "Armor"     then _G.OutfitMap.Armor     = val
                     elseif k == "Parachute" then _G.OutfitMap.Parachute = val
                     elseif k == "Pet"       then _G.OutfitMap.Pet       = val
-                    elseif k == "SCAR"    then _G.WeaponSkinMap[101003] = val
                     elseif k == "AKM"     then _G.WeaponSkinMap[101001] = val
-elseif k == "M416"    then _G.WeaponSkinMap[101004] = val
-elseif k == "GROZA"   then _G.WeaponSkinMap[101005] = val
-elseif k == "AUG"     then _G.WeaponSkinMap[101006] = val
-elseif k == "QBZ"     then _G.WeaponSkinMap[101007] = val
-elseif k == "M762"    then _G.WeaponSkinMap[101008] = val
-elseif k == "MK47"    then _G.WeaponSkinMap[101009] = val
-elseif k == "G36C"    then _G.WeaponSkinMap[101010] = val
-elseif k == "HoneyBadger" then _G.WeaponSkinMap[101012] = val
-elseif k == "ASM"     then _G.WeaponSkinMap[101101] = val
-elseif k == "FAMAS"   then _G.WeaponSkinMap[101100] = val
-elseif k == "ACE32"   then _G.WeaponSkinMap[101102] = val
-elseif k == "UZI"     then _G.WeaponSkinMap[102001] = val
-elseif k == "UMP"     then _G.WeaponSkinMap[102002] = val
-elseif k == "Vector"  then _G.WeaponSkinMap[102003] = val
-elseif k == "Bizon"   then _G.WeaponSkinMap[102005] = val
-elseif k == "MP5K"    then _G.WeaponSkinMap[102007] = val
-elseif k == "P90"     then _G.WeaponSkinMap[102105] = val
-elseif k == "Kar98"   then _G.WeaponSkinMap[103001] = val
-elseif k == "M24"     then _G.WeaponSkinMap[103002] = val
-elseif k == "AWM"     then _G.WeaponSkinMap[103003] = val
-elseif k == "SKS"     then _G.WeaponSkinMap[103004] = val
-elseif k == "VSS"     then _G.WeaponSkinMap[103005] = val
-elseif k == "Mini14"  then _G.WeaponSkinMap[103006] = val
-elseif k == "MK14"    then _G.WeaponSkinMap[103007] = val
-elseif k == "SLR"     then _G.WeaponSkinMap[103009] = val
-elseif k == "QBU"     then _G.WeaponSkinMap[103010] = val
-elseif k == "MK12"    then _G.WeaponSkinMap[103100] = val
-elseif k == "AMR"     then _G.WeaponSkinMap[103012] = val
-elseif k == "DSR"     then _G.WeaponSkinMap[103102] = val
-elseif k == "Mosin"   then _G.WeaponSkinMap[103013] = val
-elseif k == "S12K"    then _G.WeaponSkinMap[104003] = val
-elseif k == "DBS"     then _G.WeaponSkinMap[104004] = val
-elseif k == "S1897"   then _G.WeaponSkinMap[104001] = val
-elseif k == "S686"    then _G.WeaponSkinMap[104002] = val
-elseif k == "M249"    then _G.WeaponSkinMap[105001] = val
-elseif k == "DP28"    then _G.WeaponSkinMap[105002] = val
-elseif k == "MG3"     then _G.WeaponSkinMap[105010] = val
-elseif k == "Pan"     then _G.WeaponSkinMap[108004] = val
-elseif k == "Machete" then _G.WeaponSkinMap[108001] = val
-elseif k == "Crowbar" then _G.WeaponSkinMap[108002] = val
-elseif k == "Sickle"  then _G.WeaponSkinMap[108003] = val
-                    -- ... baki weapons ke liye aap original file se list copy kar sakte hain
-                    -- (full list already hai is file mein, aap wahan se le sakte hain)
+                    elseif k == "SCAR"    then _G.WeaponSkinMap[101003] = val
+                    elseif k == "M416"    then _G.WeaponSkinMap[101004] = val
+                    elseif k == "GROZA"   then _G.WeaponSkinMap[101005] = val
+                    elseif k == "AUG"     then _G.WeaponSkinMap[101006] = val
+                    elseif k == "QBZ"     then _G.WeaponSkinMap[101007] = val
+                    elseif k == "M762"    then _G.WeaponSkinMap[101008] = val
+                    elseif k == "MK47"    then _G.WeaponSkinMap[101009] = val
+                    elseif k == "G36C"    then _G.WeaponSkinMap[101010] = val
+                    elseif k == "HoneyBadger" then _G.WeaponSkinMap[101012] = val
+                    elseif k == "ASM"     then _G.WeaponSkinMap[101101] = val
+                    elseif k == "FAMAS"   then _G.WeaponSkinMap[101100] = val
+                    elseif k == "ACE32"   then _G.WeaponSkinMap[101102] = val
+                    elseif k == "UZI"     then _G.WeaponSkinMap[102001] = val
+                    elseif k == "UMP"     then _G.WeaponSkinMap[102002] = val
+                    elseif k == "Vector"  then _G.WeaponSkinMap[102003] = val
+                    elseif k == "Bizon"   then _G.WeaponSkinMap[102005] = val
+                    elseif k == "MP5K"    then _G.WeaponSkinMap[102007] = val
+                    elseif k == "P90"     then _G.WeaponSkinMap[102105] = val
+                    elseif k == "Kar98"   then _G.WeaponSkinMap[103001] = val
+                    elseif k == "M24"     then _G.WeaponSkinMap[103002] = val
+                    elseif k == "AWM"     then _G.WeaponSkinMap[103003] = val
+                    elseif k == "SKS"     then _G.WeaponSkinMap[103004] = val
+                    elseif k == "VSS"     then _G.WeaponSkinMap[103005] = val
+                    elseif k == "Mini14"  then _G.WeaponSkinMap[103006] = val
+                    elseif k == "MK14"    then _G.WeaponSkinMap[103007] = val
+                    elseif k == "SLR"     then _G.WeaponSkinMap[103009] = val
+                    elseif k == "QBU"     then _G.WeaponSkinMap[103010] = val
+                    elseif k == "MK12"    then _G.WeaponSkinMap[103100] = val
+                    elseif k == "AMR"     then _G.WeaponSkinMap[103012] = val
+                    elseif k == "DSR"     then _G.WeaponSkinMap[103102] = val
+                    elseif k == "Mosin"   then _G.WeaponSkinMap[103013] = val
+                    elseif k == "S12K"    then _G.WeaponSkinMap[104003] = val
+                    elseif k == "DBS"     then _G.WeaponSkinMap[104004] = val
+                    elseif k == "S1897"   then _G.WeaponSkinMap[104001] = val
+                    elseif k == "S686"    then _G.WeaponSkinMap[104002] = val
+                    elseif k == "M249"    then _G.WeaponSkinMap[105001] = val
+                    elseif k == "DP28"    then _G.WeaponSkinMap[105002] = val
+                    elseif k == "MG3"     then _G.WeaponSkinMap[105010] = val
+                    elseif k == "Pan"     then _G.WeaponSkinMap[108004] = val
+                    elseif k == "Machete" then _G.WeaponSkinMap[108001] = val
+                    elseif k == "Crowbar" then _G.WeaponSkinMap[108002] = val
+                    elseif k == "Sickle"  then _G.WeaponSkinMap[108003] = val
                     end
                 end
             end
@@ -3393,10 +3414,16 @@ _G._SetupSkinTimer = function()
         local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
         if not (pc and slua.isValid(pc)) then return end
         if _G.SkinTimerPC == pc then return end
+
+        -- Clear previous skin timer
+        if _G.SkinTimerPC and _G.SkinTimerHandle then
+            pcall(function() _G.SkinTimerPC:RemoveGameTimer(_G.SkinTimerHandle) end)
+        end
+
         _G.SkinTimerPC = pc
         _G._SkinTimerInstalled = true
         _G._SkinTickCount = 0
-        pc:AddGameTimer(0.5, true, function()
+        _G.SkinTimerHandle = pc:AddGameTimer(0.5, true, function()
             pcall(function()
                 local lpc = slua_GameFrontendHUD:GetPlayerController()
                 if not (lpc and slua.isValid(lpc)) then return end
@@ -3418,7 +3445,140 @@ _G._SetupSkinTimer = function()
     end)
 end
 
-_G._SetupSkinTimer()
+-- ==================== REINIT ON NEW MATCH (FIXES SECOND MATCH) ====================
+_G.FeaturesTick = function()
+    pcall(function()
+        if not _G.CheatsEnabled then return end
+        local pc = slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(pc) then return end
+        local char = pc:GetPlayerCharacterSafety()
+        if not slua.isValid(char) then return end
+        local lp = GameplayData.GetPlayerCharacter()
+        if not slua.isValid(lp) then return end
+
+        -- iPad View
+        local SubsystemMgr = SubsystemMgr or package.loaded["GameLua.GameCore.Module.Subsystem.SubsystemMgr"] or require("GameLua.GameCore.Module.Subsystem.SubsystemMgr")
+        if SubsystemMgr then
+            local SettingSubsystem = SubsystemMgr:Get("SettingSubsystem")
+            if SettingSubsystem then
+                local rawSliderValue = _G.Mod_iPadViewDistance or (SettingSubsystem:GetUserSettings_Int("TpViewValue") or 90)
+                local targetTPP = rawSliderValue
+                if rawSliderValue > 80 and rawSliderValue <= 90 then
+                    targetTPP = 80 + (rawSliderValue - 80) * 6.0
+                elseif rawSliderValue > 90 then
+                    targetTPP = rawSliderValue
+                end
+                if _G.Mod_iPadView_Enabled ~= false then
+                    local uTPPCam = char.ThirdPersonCameraComponent
+                    if slua.isValid(uTPPCam) and not char.bIsWeaponAiming then
+                        if uTPPCam.FieldOfView ~= targetTPP then
+                            uTPPCam.FieldOfView = targetTPP
+                        end
+                    end
+                end
+            end
+        end
+
+        -- No Grass
+        local gi = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
+        if not gi then
+            local SettingUtil = require("client.slua.logic.setting.setting_util")
+            gi = SettingUtil and SettingUtil.GetGameInstance()
+        end
+        if gi and _G.Mod_NoGrass_Enabled ~= false then
+            if not _G._NoGrassApplied then
+                gi:ExecuteCMD("grass.DensityScale", "0")
+                gi:ExecuteCMD("grass.DiscardDataOnLoad", "1")
+                _G._NoGrassApplied = true
+            end
+        end
+    end)
+end
+
+function _G.ReinitMod()
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+
+    -- Clear old timers
+    local function clearTimer(handle)
+        if handle and slua.isValid(handle) then
+            pcall(function()
+                if type(handle.RemoveGameTimer) == "function" then
+                    handle:RemoveGameTimer(handle)
+                end
+            end)
+        end
+    end
+    clearTimer(_G.ModTimers.esp)
+    clearTimer(_G.ModTimers.skin)
+    clearTimer(_G.ModTimers.aimbot)
+    clearTimer(_G.ModTimers.memory)
+    clearTimer(_G.ModTimers.features)
+    _G.ModTimers.esp = nil
+    _G.ModTimers.skin = nil
+    _G.ModTimers.aimbot = nil
+    _G.ModTimers.memory = nil
+    _G.ModTimers.features = nil
+
+    if slua.isValid(pc) and pc.AddGameTimer then
+        -- ESP Timer
+        _G.ModTimers.esp = pc:AddGameTimer(0.2, true, function()
+            pcall(ESPTick)
+        end)
+
+        -- Skin Timer
+        pcall(_G._SetupSkinTimer)
+
+        -- Aimbot Timer
+        _G._AimbotCurrentPC = nil
+        pcall(AttachAimbotTimer)
+
+        -- Features Timer (iPad, NoGrass)
+        _G._FeaturesTimerPC = nil
+        _G.ModTimers.features = pc:AddGameTimer(0.1, true, _G.FeaturesTick)
+
+        -- Reapply Memory Features if they were ON
+        if _G.MemoryConfig.SpeedBoost then pcall(SetMemorySpeedBoost, true) end
+        if _G.MemoryConfig.AntiGravity then pcall(SetMemoryAntiGravity, true) end
+        if _G.MemoryConfig.WallClimb then pcall(SetMemoryWallClimb, true) end
+        if _G.MemoryConfig.CharRotation then pcall(SetMemoryCharRotation, true) end
+        if _G.MemoryConfig.CharScale ~= 1.0 then pcall(SetMemoryCharScale, _G.MemoryConfig.CharScale) end
+        if _G.MemoryConfig.EnemyScale ~= 1.0 then pcall(SetMemoryEnemyScale, _G.MemoryConfig.EnemyScale) end
+        if _G.MemoryConfig.SuperBullet > 1 then pcall(ApplyMemorySuperBullet, _G.MemoryConfig.SuperBullet) end
+        if _G.MemoryConfig.SuperFireRate then pcall(ApplyMemorySuperFireRate, true) end
+        if _G.MemoryConfig.InfiniteAmmo then pcall(ApplyMemoryInfiniteAmmo, true) end
+        if _G.MemoryConfig.MagicBullet then pcall(ApplyMemoryMagicBullet, true) end
+
+        -- Reapply Skin toggle if it was ON
+        if _G.Mod_Skin_Enabled then
+            pcall(_G.ApplyLocalPlayerSkins, pc:GetPlayerCharacterSafety())
+        end
+
+        print("[MOD] ✅ Reinitialized on new match")
+    end
+
+    _G.ModTimers.lastPc = pc
+end
+
+-- Persistent Watchdog (every 5 sec) to catch missed reinit
+pcall(function()
+    local function watchdog()
+        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(pc) then return end
+        if _G.ModTimers.lastPc ~= pc then
+            pcall(_G.ReinitMod)
+        end
+    end
+    local function startWatchdog()
+        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if slua.isValid(pc) and pc.AddGameTimer then
+            _G.ModTimers.watchdog = pc:AddGameTimer(5.0, true, watchdog)
+        else
+            pcall(function() Game:AddGameTimer(2.0, false, startWatchdog) end)
+        end
+    end
+    startWatchdog()
+end)
 
 -- ==================== MEMORY FEATURES FUNCTIONS ====================
 _G.MemoryConfig = _G.MemoryConfig or {
@@ -3785,6 +3945,7 @@ function SetSnowEnabled(enabled)
         end
     end)
 end
+
 -- ==================== WALLHACK ====================
 local function ApplyWallHack(localPlayer, enemy, pc)
     if not _G.CheatsEnabled then return end
@@ -4149,73 +4310,6 @@ end
 if _G.Mod_FPS165_Enabled ~= false then _G.Enable165FPSLogic() end
 if _G.Mod_iPadView_Enabled ~= false then _G.EnableiPadViewUI() end
 
--- ================ IPAD VIEW & NO GRASS (Built-in) ================
-local pc = slua_GameFrontendHUD:GetPlayerController()
-if isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
-  _G._FeaturesTimerPC = pc
-  local SubsystemMgr = nil
-  local lastViewDistance = nil
-  _G._originalTPPFOV = nil
-
-  pc:AddGameTimer(0.1, true, function()
-    pcall(function()
-      if not _G.CheatsEnabled then return end
-      local pc = slua_GameFrontendHUD:GetPlayerController()
-      if not isValid(pc) then return end
-      local char = pc:GetPlayerCharacterSafety()
-      if not isValid(char) then return end
-      local lp = GameplayData.GetPlayerCharacter()
-      if not isValid(lp) then return end
-
-      SubsystemMgr = SubsystemMgr or package.loaded["GameLua.GameCore.Module.Subsystem.SubsystemMgr"] or require("GameLua.GameCore.Module.Subsystem.SubsystemMgr")
-      if SubsystemMgr then
-        local SettingSubsystem = SubsystemMgr:Get("SettingSubsystem")
-        if SettingSubsystem then
-          local rawSliderValue = _G.Mod_iPadViewDistance or (SettingSubsystem:GetUserSettings_Int("TpViewValue") or 90)
-          local targetTPP = rawSliderValue
-          if rawSliderValue > 80 and rawSliderValue <= 90 then
-              targetTPP = 80 + (rawSliderValue - 80) * 6.0
-          elseif rawSliderValue > 90 then
-              targetTPP = rawSliderValue
-          end
-
-          local uTPPCam = char.ThirdPersonCameraComponent
-          if isValid(uTPPCam) and not char.bIsWeaponAiming then
-              if _G._originalTPPFOV == nil then
-                  _G._originalTPPFOV = uTPPCam.FieldOfView or 90
-              end
-
-              if _G.Mod_iPadView_Enabled ~= false then
-                  if lastViewDistance ~= targetTPP then
-                      uTPPCam.FieldOfView = targetTPP
-                      lastViewDistance = targetTPP
-                  end
-              else
-                  if lastViewDistance ~= _G._originalTPPFOV then
-                      uTPPCam.FieldOfView = _G._originalTPPFOV
-                      lastViewDistance = _G._originalTPPFOV
-                  end
-              end
-          end
-        end
-      end
-
-      local gi = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
-      if not gi then
-        local SettingUtil = require("client.slua.logic.setting.setting_util")
-        gi = SettingUtil and SettingUtil.GetGameInstance()
-      end
-      if gi and _G.Mod_NoGrass_Enabled ~= false then
-        if not _G._NoGrassApplied then
-          gi:ExecuteCMD("grass.DensityScale", "0")
-          gi:ExecuteCMD("grass.DiscardDataOnLoad", "1")
-          _G._NoGrassApplied = true
-        end
-      end
-    end)
-  end)
-end
-
 _G._AimbotCurrentPC = nil
 
 local function ApplyHardAimbot()
@@ -4287,20 +4381,6 @@ local function AttachAimbotTimer()
         end
     end)
 end
-
-AttachAimbotTimer()
-
-pcall(function()
-    local pc = slua_GameFrontendHUD:GetPlayerController()
-    if isValid(pc) and pc.AddGameTimer then
-        pc:AddGameTimer(2.0, true, function()
-            if not isValid(_G._AimbotCurrentPC) then
-                _G._AimbotCurrentPC = nil
-                AttachAimbotTimer()
-            end
-        end)
-    end
-end)
 
 -- ==================== MERGED MENU (All toggles in one place) ====================
 _G.InitModMenuTab = function()
@@ -4872,10 +4952,6 @@ pcall(function()
 end)
 
 -- ==================== WELCOME POPUP ====================
--- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
--- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
--- ==================== WELCOME POPUP (SYMBOLS ONLY) ====================
--- ==================== WELCOME POPUP (ULTIMATE PRO) ====================
 function _G.TryShowWelcome()
     pcall(function()
         local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
@@ -4897,3 +4973,6 @@ function _G.TryShowWelcome()
 end
 
 pcall(_G.TryShowWelcome)
+
+print("[MOD] ✅ FULL SCRIPT LOADED SUCCESSFULLY!")
+print("[MOD] 🔥 All features activated! Enjoy!")
