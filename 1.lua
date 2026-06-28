@@ -2341,6 +2341,308 @@ function SetForceChinese(enabled)
     end
 end
 
+-- ==================== MEMORY FEATURES FUNCTIONS ====================
+_G.MemoryConfig = _G.MemoryConfig or {
+    SpeedBoost = false,
+    SpeedPercent = 250,
+    AntiGravity = false,
+    GravityScale = 1.0,
+    WallClimb = false,
+    CharRotation = false,
+    CharRotSpeed = 360,
+    CharScale = 1.0,
+    EnemyScale = 1.0,
+    SuperBullet = 1,
+    SuperFireRate = false,
+    SuperFireRateVal = 0.008,
+    InfiniteAmmo = false,
+    MagicBullet = false,
+}
+
+-- Speed Boost
+_G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
+local function RemoveSpeedModify(char)
+    if not slua.isValid(char) or not char.AttrModifyComp then return end
+    if _G.SpeedBoostState.modifyId then
+        pcall(function() char.AttrModifyComp:RemoveModifyItemFromCache(_G.SpeedBoostState.modifyId) end)
+        _G.SpeedBoostState.modifyId = nil
+    end
+end
+local function ApplySpeedModify(char)
+    if not slua.isValid(char) or not char.AttrModifyComp then return end
+    RemoveSpeedModify(char)
+    local rate = (_G.MemoryConfig.SpeedPercent / 100.0) - 1.0
+    pcall(function()
+        _G.SpeedBoostState.modifyId = char.AttrModifyComp:AddModifyItemAndCache("SpeedRate", 0, rate, true, char, false)
+    end)
+end
+local function UpdateSpeedBoost()
+    if not _G.MemoryConfig.SpeedBoost then return end
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    if _G.SpeedBoostState.currentChar ~= char then
+        if _G.SpeedBoostState.currentChar then RemoveSpeedModify(_G.SpeedBoostState.currentChar) end
+        _G.SpeedBoostState.currentChar = char
+    end
+    ApplySpeedModify(char)
+end
+function SetMemorySpeedBoost(enabled)
+    _G.MemoryConfig.SpeedBoost = enabled
+    if enabled then
+        if _G.SpeedBoostState.timer then return end
+        _G.SpeedBoostState.active = true
+        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if slua.isValid(pc) and pc.AddGameTimer then
+            _G.SpeedBoostState.timer = pc:AddGameTimer(0.3, true, UpdateSpeedBoost)
+        end
+    else
+        _G.SpeedBoostState.active = false
+        if _G.SpeedBoostState.timer then
+            local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+            if slua.isValid(pc) and pc.RemoveGameTimer then pc:RemoveGameTimer(_G.SpeedBoostState.timer) end
+            _G.SpeedBoostState.timer = nil
+        end
+        if _G.SpeedBoostState.currentChar then
+            RemoveSpeedModify(_G.SpeedBoostState.currentChar)
+            _G.SpeedBoostState.currentChar = nil
+        end
+    end
+end
+function SetMemorySpeedPercent(val)
+    _G.MemoryConfig.SpeedPercent = val
+    if _G.MemoryConfig.SpeedBoost and _G.SpeedBoostState.currentChar then
+        ApplySpeedModify(_G.SpeedBoostState.currentChar)
+    end
+end
+
+-- Anti-Gravity
+function SetMemoryAntiGravity(enabled)
+    _G.MemoryConfig.AntiGravity = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if slua.isValid(char) then
+        local move = char.CharacterMovement or char.CharMoveComp
+        if move then
+            move.GravityScale = enabled and _G.MemoryConfig.GravityScale or 1.0
+        end
+    end
+end
+function SetMemoryGravityScale(val)
+    _G.MemoryConfig.GravityScale = val
+    if _G.MemoryConfig.AntiGravity then SetMemoryAntiGravity(true) end
+end
+
+-- Wall Climb
+function SetMemoryWallClimb(enabled)
+    _G.MemoryConfig.WallClimb = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if slua.isValid(char) then
+        local move = char.CharacterMovement or char.CharMoveComp
+        if move then
+            if enabled then
+                move.WalkableFloorAngle = 199.0
+                move.MaxStepHeight = 999.0
+            else
+                move.WalkableFloorAngle = 45.0
+                move.MaxStepHeight = 45.0
+            end
+        end
+    end
+end
+
+-- Character Rotation
+_G.CharRotState = _G.CharRotState or {timer = nil, yaw = 0}
+local function UpdateCharRot()
+    if not _G.MemoryConfig.CharRotation then return end
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) or not slua.isValid(char.Mesh) then return end
+    _G.CharRotState.yaw = (_G.CharRotState.yaw + _G.MemoryConfig.CharRotSpeed * 0.016) % 360
+    local rot = char.Mesh:K2_GetComponentRotation()
+    rot.Yaw = _G.CharRotState.yaw
+    char.Mesh:K2_SetWorldRotation(rot, false, nil, false)
+end
+function SetMemoryCharRotation(enabled)
+    _G.MemoryConfig.CharRotation = enabled
+    if enabled then
+        if _G.CharRotState.timer then return end
+        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if slua.isValid(pc) and pc.AddGameTimer then
+            local char = pc:GetPlayerCharacterSafety()
+            if slua.isValid(char) and slua.isValid(char.Mesh) then
+                _G.CharRotState.yaw = char.Mesh:K2_GetComponentRotation().Yaw
+            end
+            _G.CharRotState.timer = pc:AddGameTimer(0.016, true, UpdateCharRot)
+        end
+    else
+        if _G.CharRotState.timer then
+            local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+            if slua.isValid(pc) and pc.RemoveGameTimer then pc:RemoveGameTimer(_G.CharRotState.timer) end
+            _G.CharRotState.timer = nil
+        end
+    end
+end
+function SetMemoryCharRotSpeed(val) _G.MemoryConfig.CharRotSpeed = val end
+
+-- Character / Enemy Scale
+function SetMemoryCharScale(val)
+    _G.MemoryConfig.CharScale = val
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if slua.isValid(pc) then
+        local char = pc:GetPlayerCharacterSafety()
+        if slua.isValid(char) then char:SetActorScale3D(FVector(val, val, val)) end
+    end
+end
+function SetMemoryEnemyScale(val)
+    _G.MemoryConfig.EnemyScale = val
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local myChar = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(myChar) then return end
+    local myTeam = myChar.TeamID or 0
+    local all = Game:GetAllPlayerPawns()
+    if not all then return end
+    for _, p in pairs(all) do
+        if slua.isValid(p) and p ~= myChar and (p.TeamID or 0) ~= myTeam then
+            p:SetActorScale3D(FVector(val, val, val))
+        end
+    end
+end
+
+-- Super Bullet
+function ApplyMemorySuperBullet(count)
+    _G.MemoryConfig.SuperBullet = count or 1
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    local wm = char.WeaponManagerComponent
+    if not slua.isValid(wm) then return end
+    local wep = wm.CurrentWeaponReplicated
+    if not slua.isValid(wep) then return end
+    local shoot = wep.ShootWeaponEntityComp
+    if slua.isValid(shoot) then
+        shoot.BulletNumSingleShot = count
+    end
+end
+
+-- Super Fire Rate
+function ApplyMemorySuperFireRate(enabled)
+    _G.MemoryConfig.SuperFireRate = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    local wm = char.WeaponManagerComponent
+    if not slua.isValid(wm) then return end
+    local wep = wm.CurrentWeaponReplicated
+    if not slua.isValid(wep) then return end
+    local shoot = wep.ShootWeaponEntityComp
+    if slua.isValid(shoot) then
+        shoot.ShootInterval = enabled and _G.MemoryConfig.SuperFireRateVal or 0.1
+    end
+end
+function SetMemorySuperFireRateVal(val) _G.MemoryConfig.SuperFireRateVal = val end
+
+-- Infinite Ammo
+function ApplyMemoryInfiniteAmmo(enabled)
+    _G.MemoryConfig.InfiniteAmmo = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    local wm = char.WeaponManagerComponent
+    if not slua.isValid(wm) then return end
+    local wep = wm.CurrentWeaponReplicated
+    if not slua.isValid(wep) then return end
+    local shoot = wep.ShootWeaponEntityComp
+    if slua.isValid(shoot) then
+        shoot.bClipHasInfiniteBullets = enabled
+        shoot.bHasInfiniteBullets = enabled
+    end
+end
+
+-- Risky Magic Bullet (Enlarged Hitboxes)
+_G._MBones = _G._MBones or {}
+function ApplyMemoryMagicBullet(enabled)
+    _G.MemoryConfig.MagicBullet = enabled
+    if not enabled then return end
+    local all = Game:GetAllPlayerPawns() or {}
+    for _, c in pairs(all) do
+        if slua.isValid(c) then
+            local mesh = c.Mesh
+            if slua.isValid(mesh) then
+                local phys = mesh.PhysicsAssetOverride
+                if not slua.isValid(phys) and slua.isValid(mesh.SkeletalMesh) then
+                    phys = mesh.SkeletalMesh.PhysicsAsset
+                end
+                if slua.isValid(phys) and phys.SkeletalBodySetups then
+                    local name = (phys.GetName and phys:GetName()) or tostring(phys)
+                    if not _G._MBones[name] then
+                        local setups = phys.SkeletalBodySetups
+                        for i = 1, 80 do
+                            local bs = nil
+                            pcall(function() bs = (type(setups.Get) == "function") and setups:Get(i-1) or setups[i] end)
+                            if not bs or not slua.isValid(bs) then break end
+                            local bn = tostring(bs.BoneName):lower()
+                            local mult = 1.0
+                            if bn:find("head") then mult = 3.0
+                            elseif bn:find("neck") then mult = 2.5
+                            elseif bn:find("spine") then mult = 2.0
+                            elseif bn:find("upper") or bn:find("lower") then mult = 1.8
+                            else mult = 1.5 end
+                            local ag = bs.AggGeom
+                            pcall(function()
+                                local bx = (ag and ag.BoxElems) or bs.BoxElems
+                                if bx then
+                                    local b = (type(bx.Get) == "function") and bx:Get(0) or bx[1]
+                                    if b then
+                                        b.X = (b.X or 30) * mult; b.Y = (b.Y or 30) * mult; b.Z = (b.Z or 60) * mult
+                                        if type(bx.Set) == "function" then bx:Set(0, b) else bx[1] = b end
+                                        if ag then bs.AggGeom = ag else bs.BoxElems = bx end
+                                    end
+                                end
+                            end)
+                            pcall(function()
+                                local sp = (ag and ag.SphylElems) or bs.SphylElems
+                                if sp then
+                                    local s = (type(sp.Get) == "function") and sp:Get(0) or sp[1]
+                                    if s then s.Radius = (s.Radius or 15) * mult; s.Length = (s.Length or 30) * mult
+                                        if type(sp.Set) == "function" then sp:Set(0, s) else sp[1] = s end
+                                        if ag then bs.AggGeom = ag else bs.SphylElems = sp end
+                                    end
+                                end
+                            end)
+                            pcall(function()
+                                local sr = (ag and ag.SphereElems) or bs.SphereElems
+                                if sr then
+                                    local r = (type(sr.Get) == "function") and sr:Get(0) or sr[1]
+                                    if r then r.Radius = (r.Radius or 20) * mult
+                                        if type(sr.Set) == "function" then sr:Set(0, r) else sr[1] = r end
+                                        if ag then bs.AggGeom = ag else bs.SphereElems = sr end
+                                    end
+                                end
+                            end)
+                        end
+                        _G._MBones[name] = true
+                        if mesh.RecreatePhysicsState then mesh:RecreatePhysicsState() end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Normalize / Denormalize helpers for sliders
+local function Norm(val, min, max) return (val - min) / (max - min) end
+local function DeNorm(norm, min, max) return min + (norm * (max - min)) end
+
 -- ==================== RAIN EFFECT ====================
 local function GetSubsystemMgr()
     if _G.SubsystemMgr then return _G.SubsystemMgr end
@@ -3244,20 +3546,168 @@ _G.InitModMenuTab = function()
             Stack = ModMenuStack
         },
         {
-            Key = "ModMenu_Memory",
-            loc = "Memory Features",
-            Stack = {
-                { UI = AliasMap.Title, Text = "Memory Tweaks" },
-                {
-                    Key = "Memory_Aimbot_Example",
-                    UI = AliasMap.Switcher,
-                    Text = "AIMBOT (Example)",
-                    GetFunc = function() return _G.Mod_Aimbot_Enabled or false end,
-                    SetFunc = function(_, value)
-                        _G.Mod_Aimbot_Enabled = value
-                        print("[MEMORY] AIMBOT: " .. (value and "ON ✓" or "OFF ✗"))
-                        return true
-                    end
+    Key = "ModMenu_Memory",
+    loc = "Memory Features",
+    Stack = {
+        { UI = AliasMap.Title, Text = "⚡ MOVEMENT TWEAKS" },
+
+        {
+            Key = "Mem_SpeedBoost",
+            UI = AliasMap.TitleSwitcher,
+            Text = "Speed Boost",
+            GetFunc = function() return _G.MemoryConfig.SpeedBoost end,
+            SetFunc = function(_, val)
+                SetMemorySpeedBoost(val)
+                return true
+            end
+        },
+        {
+            Key = "Mem_SpeedPercent",
+            UI = AliasMap.Slider,
+            Text = "Speed % (100-500)",
+            GetFunc = function() return Norm(_G.MemoryConfig.SpeedPercent, 100, 500) end,
+            SetFunc = function(_, val)
+                SetMemorySpeedPercent(DeNorm(val, 100, 500))
+                return true
+            end
+        },
+
+        {
+            Key = "Mem_AntiGravity",
+            UI = AliasMap.TitleSwitcher,
+            Text = "Anti-Gravity",
+            GetFunc = function() return _G.MemoryConfig.AntiGravity end,
+            SetFunc = function(_, val)
+                SetMemoryAntiGravity(val)
+                return true
+            end
+        },
+        {
+            Key = "Mem_GravityScale",
+            UI = AliasMap.Slider,
+            Text = "Gravity Scale (-0.45 to 1.0)",
+            GetFunc = function() return Norm(_G.MemoryConfig.GravityScale, -0.45, 1.0) end,
+            SetFunc = function(_, val)
+                SetMemoryGravityScale(DeNorm(val, -0.45, 1.0))
+                return true
+            end
+        },
+
+        {
+            Key = "Mem_WallClimb",
+            UI = AliasMap.TitleSwitcher,
+            Text = "Wall Climb",
+            GetFunc = function() return _G.MemoryConfig.WallClimb end,
+            SetFunc = function(_, val)
+                SetMemoryWallClimb(val)
+                return true
+            end
+        },
+
+        {
+            Key = "Mem_CharRotation",
+            UI = AliasMap.TitleSwitcher,
+            Text = "Character Rotation",
+            GetFunc = function() return _G.MemoryConfig.CharRotation end,
+            SetFunc = function(_, val)
+                SetMemoryCharRotation(val)
+                return true
+            end
+        },
+        {
+            Key = "Mem_CharRotSpeed",
+            UI = AliasMap.Slider,
+            Text = "Rot Speed (180-1080°/s)",
+            GetFunc = function() return Norm(_G.MemoryConfig.CharRotSpeed, 180, 1080) end,
+            SetFunc = function(_, val)
+                SetMemoryCharRotSpeed(DeNorm(val, 180, 1080))
+                return true
+            end
+        },
+
+        { UI = AliasMap.Title, Text = "📏 SCALE TWEAKS" },
+
+        {
+            Key = "Mem_CharScale",
+            UI = AliasMap.Slider,
+            Text = "My Scale (1.0x - 10.0x)",
+            GetFunc = function() return Norm(_G.MemoryConfig.CharScale, 1.0, 10.0) end,
+            SetFunc = function(_, val)
+                SetMemoryCharScale(DeNorm(val, 1.0, 10.0))
+                return true
+            end
+        },
+        {
+            Key = "Mem_EnemyScale",
+            UI = AliasMap.Slider,
+            Text = "Enemy Scale (1.0x - 10.0x)",
+            GetFunc = function() return Norm(_G.MemoryConfig.EnemyScale, 1.0, 10.0) end,
+            SetFunc = function(_, val)
+                SetMemoryEnemyScale(DeNorm(val, 1.0, 10.0))
+                return true
+            end
+        },
+
+        { UI = AliasMap.Title, Text = "🔫 WEAPON TWEAKS" },
+
+        {
+            Key = "Mem_SuperBullet",
+            UI = AliasMap.Slider,
+            Text = "Super Bullet (1-20)",
+            GetFunc = function() return Norm(_G.MemoryConfig.SuperBullet, 1, 20) end,
+            SetFunc = function(_, val)
+                local count = math.floor(DeNorm(val, 1, 20))
+                ApplyMemorySuperBullet(count)
+                return true
+            end
+        },
+
+        {
+            Key = "Mem_SuperFireRate",
+            UI = AliasMap.TitleSwitcher,
+            Text = "Super Fire Rate",
+            GetFunc = function() return _G.MemoryConfig.SuperFireRate end,
+            SetFunc = function(_, val)
+                ApplyMemorySuperFireRate(val)
+                return true
+            end
+        },
+        {
+            Key = "Mem_SuperFireRateVal",
+            UI = AliasMap.Slider,
+            Text = "Fire Interval (0.001 - 0.05s)",
+            GetFunc = function() return Norm(_G.MemoryConfig.SuperFireRateVal, 0.001, 0.05) end,
+            SetFunc = function(_, val)
+                SetMemorySuperFireRateVal(DeNorm(val, 0.001, 0.05))
+                if _G.MemoryConfig.SuperFireRate then
+                    ApplyMemorySuperFireRate(true)
+                end
+                return true
+            end
+        },
+
+        {
+            Key = "Mem_InfiniteAmmo",
+            UI = AliasMap.TitleSwitcher,
+            Text = "Infinite Ammo",
+            GetFunc = function() return _G.MemoryConfig.InfiniteAmmo end,
+            SetFunc = function(_, val)
+                ApplyMemoryInfiniteAmmo(val)
+                return true
+            end
+        },
+
+        { UI = AliasMap.Title, Text = "☣️ RISKY (USE AT OWN RISK)" },
+
+        {
+            Key = "Mem_MagicBullet",
+            UI = AliasMap.TitleSwitcher,
+            Text = "Magic Bullet (Enlarged Hitboxes)",
+            GetFunc = function() return _G.MemoryConfig.MagicBullet end,
+            SetFunc = function(_, val)
+                ApplyMemoryMagicBullet(val)
+                return true
+            end
                 }
             }
         }
