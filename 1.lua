@@ -2962,6 +2962,116 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            
+            -- ===== IPAD VIEW SLIDER =====
+{
+    Key = "ModMenu_iPadViewDistance",
+    UI = AliasMap.Slider,
+    Text = "iPad View Distance (80-140)",
+    GetFunc = function() 
+        return ((_G.Mod_iPadViewDistance or 90) - 80) / 60
+    end,
+    SetFunc = function(_, value)
+        _G.Mod_iPadViewDistance = math.floor(80 + (value * 60))
+        print("[MOD] View Distance: " .. _G.Mod_iPadViewDistance)
+        return true
+    end
+},
+
+-- ===== CHAMS COLOR CONTROLS =====
+{
+    Key = "Title_ESP_Colors",
+    UI = AliasMap.Title,
+    Text = "CHAMS COLORS"
+},
+{
+    Key = "ModMenu_GreenColor",
+    UI = AliasMap.Switcher,
+    Text = "GREEN (Visible)",
+    GetFunc = function() return _G.Mod_Chams_GreenEnabled or false end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_GreenEnabled = value
+        print("[MOD] GREEN CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
+        return true
+    end
+},
+{
+    Key = "ModMenu_GreenR",
+    UI = AliasMap.Slider,
+    Text = "Green - Red (0-255)",
+    GetFunc = function() return (_G.Mod_Chams_GreenRGB.R or 0) / 255 end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_GreenRGB.R = math.floor(value * 255)
+        print("[MOD] Green-R: " .. _G.Mod_Chams_GreenRGB.R)
+        return true
+    end
+},
+{
+    Key = "ModMenu_GreenG",
+    UI = AliasMap.Slider,
+    Text = "Green - Green (0-255)",
+    GetFunc = function() return (_G.Mod_Chams_GreenRGB.G or 255) / 255 end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_GreenRGB.G = math.floor(value * 255)
+        print("[MOD] Green-G: " .. _G.Mod_Chams_GreenRGB.G)
+        return true
+    end
+},
+{
+    Key = "ModMenu_GreenB",
+    UI = AliasMap.Slider,
+    Text = "Green - Blue (0-255)",
+    GetFunc = function() return (_G.Mod_Chams_GreenRGB.B or 0) / 255 end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_GreenRGB.B = math.floor(value * 255)
+        print("[MOD] Green-B: " .. _G.Mod_Chams_GreenRGB.B)
+        return true
+    end
+},
+{
+    Key = "ModMenu_YellowColor",
+    UI = AliasMap.Switcher,
+    Text = "YELLOW (Hidden)",
+    GetFunc = function() return _G.Mod_Chams_YellowEnabled or false end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_YellowEnabled = value
+        print("[MOD] YELLOW CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
+        return true
+    end
+},
+{
+    Key = "ModMenu_YellowR",
+    UI = AliasMap.Slider,
+    Text = "Yellow - Red (0-255)",
+    GetFunc = function() return (_G.Mod_Chams_YellowRGB.R or 255) / 255 end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_YellowRGB.R = math.floor(value * 255)
+        print("[MOD] Yellow-R: " .. _G.Mod_Chams_YellowRGB.R)
+        return true
+    end
+},
+{
+    Key = "ModMenu_YellowG",
+    UI = AliasMap.Slider,
+    Text = "Yellow - Green (0-255)",
+    GetFunc = function() return (_G.Mod_Chams_YellowRGB.G or 255) / 255 end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_YellowRGB.G = math.floor(value * 255)
+        print("[MOD] Yellow-G: " .. _G.Mod_Chams_YellowRGB.G)
+        return true
+    end
+},
+{
+    Key = "ModMenu_YellowB",
+    UI = AliasMap.Slider,
+    Text = "Yellow - Blue (0-255)",
+    GetFunc = function() return (_G.Mod_Chams_YellowRGB.B or 0) / 255 end,
+    SetFunc = function(_, value)
+        _G.Mod_Chams_YellowRGB.B = math.floor(value * 255)
+        print("[MOD] Yellow-B: " .. _G.Mod_Chams_YellowRGB.B)
+        return true
+    end
+},
 
             -- === SCENE OPTIONS ===
             { UI = AliasMap.Title, Text = "--- SCENE OPTIONS ---" },
@@ -3125,29 +3235,14 @@ function _G.TryShowWelcome()
         local Web = require("client.slua.logic.url.logic_webview_sdk")
         local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
         if Msg and Msg.Show then
-            Msg.Show(4, ">> TRNDRAVIX ELITE ULTIMATE <<",
-            "\n===========================================\n" ..
-            "     ◆  HYBRID ENGINE v4.0  ◆\n" ..
-            "===========================================\n" ..
-            "\n  [ STATUS ]  >>  ONLINE / UNDETECTED\n" ..
-            "  [ DEV ]     >>  @TrnDravix\n" ..
-            "  [ SHIELD ]  >>  5-Layer Deep Protection\n" ..
-            "\n-------------------------------------------\n" ..
-            "  ▶  FEATURES ACTIVATED :\n" ..
-            "      - ESP + Wallhack (Full Vision)\n" ..
-            "      - Aimbot + No Recoil (Precision)\n" ..
-            "      - 165 FPS + No Grass (Performance)\n" ..
-            "      - iPad View + Anti-Ban (Safety)\n" ..
-            "      - Full Visual Cleanup (Clarity)\n" ..
-            "\n-------------------------------------------\n" ..
-            "  ▶  SYSTEM STATUS :\n" ..
-            "      - Zero Lag Mode : Active\n" ..
-            "      - Memory Cleaner : Running\n" ..
-            "      - Anti-Cheat Bypass : Enabled\n" ..
-            "\n===========================================\n" ..
-            "  >>  PREMIUM BUILD LOADED SUCCESSFULLY  <<\n" ..
-            "===========================================\n" ..
-            "  [ Tap anywhere to connect with Developer ]", onClick)
+            Msg.Show(4, "» TrnDravix – ELITE ULTIMATE «",
+            "\n» Developer  : @TrnDravix\n" ..
+            "» Status     : ONLINE & ACTIVE\n" ..
+            "» Protection : 5-Layer Deep Shield\n" ..
+            "» Build      : PREMIUM LOADED\n\n" ..
+            "---------------------------------------\n" ..
+            "  [ Tap to Connect with Developer ]\n" ..
+            "---------------------------------------", onClick)
         end
         _G.WelcomeShown = true
     end)
