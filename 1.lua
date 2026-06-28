@@ -2,167 +2,7 @@
 -- ✅ BYPASS ADDED FROM TrnDravix ELITE ULTIMATE (5‑Layer Shield + CRC Faker + Network Blocker)
 -- ✅ Extra patches: Gokuba, HostedProto, AntiCheatSubsystem, Welcome Popup
 
--- ===== NEW: Match-aware initialisation =====
-if not _G._MOD_LOADED then
-    _G._MOD_LOADED = true
-    _G._MOD_PC = nil          -- will be set on first match
-    _G._MOD_PAWN = nil        -- track current pawn to detect match start
-    _G._MATCH_INIT_DONE = false
-    _G._AimbotTimerHandle = nil
-end
-
--- Function that runs once per match (called when pawn changes)
-function _G.OnMatchStart()
-    print("[MOD] New match detected – re‑initialising per‑match state")
-    
-    -- Clear per‑match caches
-    _G.AlreadyChangedSet = {}
-    _G.DeadBoxSkins = {}
-    _G.skinAttachCache = {}
-    _G.g_parts = {}
-    _G.SkinLoadedCache = {}
-    _G.LastEquippedOutfits = {}
-    _G.FakeKillCounts = {}
-    _G._SkinTimerPC = nil
-    _G._AimbotCurrentPC = nil
-    _G._ESPTimerChar = nil
-    _G._ESPTimerHandle = nil
-    _G._NoGrassApplied = false
-    _G._originalTPPFOV = nil
-    _G.lastViewDistance = nil
-    _G.KCUISystemHacked2 = false
-    _G.KCLogicHacked2 = false
-    _G.KillInfoCounterHacked = false
-    _G.WeaponInfoBackpackHacked = false
-    _G.BattleKillBroadcastSkinHacked = false
-    _G.__WeaponLogicHookInjected = false
-    _G._SkinTimerInstalled = false
-    _G._SkinTickCount = 0
-    _G._MOD_PC = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-    
-    -- Remove old timers if any
-    if _G._ESPWatchdogHandle then
-        pcall(function() Game:ClearTimer(_G._ESPWatchdogHandle) end)
-        _G._ESPWatchdogHandle = nil
-    end
-    if _G._SkinTimerHandle then
-        pcall(function()
-            if _G._SkinTimerPC and slua.isValid(_G._SkinTimerPC) then
-                _G._SkinTimerPC:RemoveGameTimer(_G._SkinTimerHandle)
-            end
-        end)
-        _G._SkinTimerHandle = nil
-        _G._SkinTimerPC = nil
-    end
-    if _G.SpeedBoostState and _G.SpeedBoostState.timer then
-        pcall(function()
-            if _G.SpeedBoostState.currentChar and slua.isValid(_G.SpeedBoostState.currentChar) then
-                _G.SpeedBoostState.currentChar:RemoveGameTimer(_G.SpeedBoostState.timer)
-            end
-        end)
-        _G.SpeedBoostState.timer = nil
-        _G.SpeedBoostState.currentChar = nil
-        _G.SpeedBoostState.active = false
-    end
-    if _G.CharRotState and _G.CharRotState.timer then
-        pcall(function()
-            local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-            if slua.isValid(pc) and pc.RemoveGameTimer then
-                pc:RemoveGameTimer(_G.CharRotState.timer)
-            end
-        end)
-        _G.CharRotState.timer = nil
-    end
-    if _G._AimbotTimerHandle then
-        pcall(function()
-            if _G._AimbotCurrentPC and slua.isValid(_G._AimbotCurrentPC) then
-                _G._AimbotCurrentPC:RemoveGameTimer(_G._AimbotTimerHandle)
-            end
-        end)
-        _G._AimbotTimerHandle = nil
-        _G._AimbotCurrentPC = nil
-    end
-    
-    -- Re‑initialise features that need per‑match setup
-    _G.ReadLiveConfig()
-    _G.ForceEnableKillCounterUI()
-    _G._SetupSkinTimer()
-    AttachAimbotTimer()
-    
-    -- Restart ESP watchdog (will detect new pawn)
-    pcall(function()
-        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-        if slua.isValid(pc) then
-            local pawn = pc:GetCurPawn()
-            if slua.isValid(pawn) then
-                _G._ESPTimerChar = pawn
-                _G._ESPTimerHandle = pawn:AddGameTimer(0.2, true, function()
-                    pcall(ESPTick)
-                end)
-            end
-        end
-    end)
-    
-    -- Re‑apply scene settings from config
-    SetBlackSky(_G.ESPConfig.BlackSky)
-    SetFogRemoval(_G.ESPConfig.RemoveFog)
-    SetGrassRemoval(_G.ESPConfig.RemoveGrass)
-    SetTreeRemoval(_G.ESPConfig.RemoveTree)
-    SetWaterRemoval(_G.ESPConfig.RemoveWater)
-    SetForceChinese(_G.ESPConfig.ForceChinese)
-    SetRainEnabled(_G.ESPConfig.RainEnabled)
-    SetSnowEnabled(_G.ESPConfig.SnowEnabled)
-    
-    -- Re‑apply speed boost etc. if enabled
-    if _G.MemoryConfig.SpeedBoost then
-        SetMemorySpeedBoost(true)
-    end
-    if _G.MemoryConfig.AntiGravity then
-        SetMemoryAntiGravity(true)
-    end
-    if _G.MemoryConfig.WallClimb then
-        SetMemoryWallClimb(true)
-    end
-    if _G.MemoryConfig.CharRotation then
-        SetMemoryCharRotation(true)
-    end
-    if _G.MemoryConfig.SuperFireRate then
-        ApplyMemorySuperFireRate(true)
-    end
-    if _G.MemoryConfig.InfiniteAmmo then
-        ApplyMemoryInfiniteAmmo(true)
-    end
-    if _G.MemoryConfig.MagicBullet then
-        ApplyMemoryMagicBullet(true)
-    end
-    
-    print("[MOD] Per‑match initialisation complete")
-    _G._MATCH_INIT_DONE = true
-end
-
--- Watchdog to detect new match (pawn change)
-pcall(function()
-    local function MatchWatchdog()
-        pcall(function()
-            local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-            if not slua.isValid(pc) then return end
-            local pawn = pc:GetCurPawn()
-            if not slua.isValid(pawn) then return end
-            
-            if _G._MOD_PAWN ~= pawn then
-                _G._MOD_PAWN = pawn
-                _G._MOD_PC = pc
-                _G.OnMatchStart()
-            end
-        end)
-    end
-    
-    -- Start watchdog if not already
-    if not _G._MATCH_WATCHDOG then
-        _G._MATCH_WATCHDOG = Game:SetTimer(0.5, true, MatchWatchdog)
-    end
-end)
-
+-- Per-match guard: allow re-init when the player controller changes (new match)
 -- Initialize feature toggles with defaults
 if not _G.Mod_Aimbot_Enabled then _G.Mod_Aimbot_Enabled = false end
 if not _G.Mod_ESP_Enabled then _G.Mod_ESP_Enabled = false end
@@ -3556,7 +3396,7 @@ _G._SetupSkinTimer = function()
         _G.SkinTimerPC = pc
         _G._SkinTimerInstalled = true
         _G._SkinTickCount = 0
-        _G._SkinTimerHandle = pc:AddGameTimer(0.5, true, function()
+        pc:AddGameTimer(0.5, true, function()
             pcall(function()
                 local lpc = slua_GameFrontendHUD:GetPlayerController()
                 if not (lpc and slua.isValid(lpc)) then return end
@@ -4377,27 +4217,6 @@ if isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
 end
 
 _G._AimbotCurrentPC = nil
-_G._AimbotTimerHandle = nil
-
-function AttachAimbotTimer()
-    pcall(function()
-        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-        if not isValid(pc) then return end
-        if pc == _G._AimbotCurrentPC then return end
-        -- Remove old timer if any
-        if _G._AimbotCurrentPC and slua.isValid(_G._AimbotCurrentPC) then
-            pcall(function() _G._AimbotCurrentPC:RemoveGameTimer(_G._AimbotTimerHandle) end)
-        end
-        _G._AimbotCurrentPC = pc
-        _G._AimbotTimerHandle = pc:AddGameTimer(0.1, true, function()
-            if not isValid(_G._AimbotCurrentPC) then
-                _G._AimbotCurrentPC = nil
-                return
-            end
-            ApplyHardAimbot()
-        end)
-    end)
-end
 
 local function ApplyHardAimbot()
     if not _G.CheatsEnabled then return end
@@ -4451,10 +4270,28 @@ local function ApplyHardAimbot()
     end)
 end
 
+local function AttachAimbotTimer()
+    pcall(function()
+        local pc = slua_GameFrontendHUD:GetPlayerController()
+        if not isValid(pc) then return end
+        if pc == _G._AimbotCurrentPC then return end
+        _G._AimbotCurrentPC = pc
+        if pc.AddGameTimer then
+            pc:AddGameTimer(0.1, true, function()
+                if not isValid(_G._AimbotCurrentPC) then
+                    _G._AimbotCurrentPC = nil
+                    return
+                end
+                ApplyHardAimbot()
+            end)
+        end
+    end)
+end
+
 AttachAimbotTimer()
 
 pcall(function()
-    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    local pc = slua_GameFrontendHUD:GetPlayerController()
     if isValid(pc) and pc.AddGameTimer then
         pc:AddGameTimer(2.0, true, function()
             if not isValid(_G._AimbotCurrentPC) then
@@ -5035,6 +4872,10 @@ pcall(function()
 end)
 
 -- ==================== WELCOME POPUP ====================
+-- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
+-- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
+-- ==================== WELCOME POPUP (SYMBOLS ONLY) ====================
+-- ==================== WELCOME POPUP (ULTIMATE PRO) ====================
 function _G.TryShowWelcome()
     pcall(function()
         local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
@@ -5056,16 +4897,3 @@ function _G.TryShowWelcome()
 end
 
 pcall(_G.TryShowWelcome)
-
--- ==================== FORCE FIRST MATCH INIT ====================
-pcall(function()
-    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-    if slua.isValid(pc) then
-        local pawn = pc:GetCurPawn()
-        if slua.isValid(pawn) then
-            _G._MOD_PAWN = pawn
-            _G._MOD_PC = pc
-            _G.OnMatchStart()
-        end
-    end
-end)
