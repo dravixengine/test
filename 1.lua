@@ -1,4 +1,4 @@
--- MODDED BY ADITYA_ORG
+-- MODDED BY TrnDravix
 -- ✅ BYPASS ADDED FROM TrnDravix ELITE ULTIMATE (5‑Layer Shield + CRC Faker + Network Blocker)
 -- ✅ Extra patches: Gokuba, HostedProto, AntiCheatSubsystem, Welcome Popup
 
@@ -37,8 +37,6 @@ if _G.ESPConfig.RemoveWater == nil then _G.ESPConfig.RemoveWater = false end
 if _G.ESPConfig.ForceChinese == nil then _G.ESPConfig.ForceChinese = false end
 if _G.ESPConfig.RainEnabled == nil then _G.ESPConfig.RainEnabled = false end
 if _G.ESPConfig.SnowEnabled == nil then _G.ESPConfig.SnowEnabled = false end
-if _G.Mod_SpeedBoost_Enabled == nil then _G.Mod_SpeedBoost_Enabled = false end
-if _G.Mod_SpeedBoost_Percent == nil then _G.Mod_SpeedBoost_Percent = 250 end
 -- ==================== BYPASS ENGINE (copied from TrnDravix) ====================
 if _G._BYPASS_LOADED then return end
 _G._BYPASS_LOADED = true
@@ -2406,70 +2404,6 @@ function SetSnowEnabled(enabled)
         end
     end)
 end
-
--- ==================== SPEED BOOST ====================
-_G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
-
-local function RemoveSpeedModify(character)
-    if not slua.isValid(character) then return end
-    if not character.AttrModifyComp then return end
-    if _G.SpeedBoostState.modifyId then
-        pcall(function() character.AttrModifyComp:RemoveModifyItemFromCache(_G.SpeedBoostState.modifyId) end)
-        _G.SpeedBoostState.modifyId = nil
-    end
-end
-
-local function ApplySpeedModify(character)
-    if not slua.isValid(character) or not character.AttrModifyComp then return end
-    RemoveSpeedModify(character)
-    local percent = _G.Mod_SpeedBoost_Percent or 250
-    local rate = (percent / 100.0) - 1.0
-    pcall(function()
-        _G.SpeedBoostState.modifyId = character.AttrModifyComp:AddModifyItemAndCache("SpeedRate", 0, rate, true, character, false)
-    end)
-end
-
-local function UpdateSpeedBoost()
-    if not _G.Mod_SpeedBoost_Enabled then return end
-    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-    if not slua.isValid(pc) then return end
-    local char = pc:GetPlayerCharacterSafety()
-    if not slua.isValid(char) then return end
-    if _G.SpeedBoostState.currentChar ~= char then
-        if _G.SpeedBoostState.currentChar then RemoveSpeedModify(_G.SpeedBoostState.currentChar) end
-        _G.SpeedBoostState.currentChar = char
-    end
-    ApplySpeedModify(char)
-end
-
-function SetSpeedBoost(enabled)
-    _G.Mod_SpeedBoost_Enabled = enabled
-    if enabled then
-        if _G.SpeedBoostState.timer then return end
-        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-        if slua.isValid(pc) and pc.AddGameTimer then
-            _G.SpeedBoostState.timer = pc:AddGameTimer(0.3, true, UpdateSpeedBoost)
-        end
-    else
-        if _G.SpeedBoostState.timer then
-            local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-            if slua.isValid(pc) and pc.RemoveGameTimer then pc:RemoveGameTimer(_G.SpeedBoostState.timer) end
-            _G.SpeedBoostState.timer = nil
-        end
-        if _G.SpeedBoostState.currentChar then
-            RemoveSpeedModify(_G.SpeedBoostState.currentChar)
-            _G.SpeedBoostState.currentChar = nil
-        end
-    end
-end
-
-function SetSpeedPercent(value)
-    _G.Mod_SpeedBoost_Percent = value or 250
-    if _G.Mod_SpeedBoost_Enabled and _G.SpeedBoostState.currentChar then
-        ApplySpeedModify(_G.SpeedBoostState.currentChar)
-    end
-end
-
 -- ==================== WALLHACK ====================
 local function ApplyWallHack(localPlayer, enemy, pc)
     if not _G.CheatsEnabled then return end
@@ -2707,10 +2641,10 @@ local function ESPTick()
         end
     end
 
-    if not crowded and HUD and currentPawn then
-        HUD:AddDebugText(string.format("BOT : %d     PLAYER : %d", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=255,B=0,A=255}, true, false, true, nil, 1.0, true)
-        HUD:AddDebugText("MOD BY @ADITYA_ORG PUBLIC", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
-    end
+  if not crowded and HUD and currentPawn then
+    HUD:AddDebugText(string.format("[ BOT: %d | PLAYER: %d ]", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=100,B=0,A=255}, true, false, true, nil, 1.0, true)
+    HUD:AddDebugText("< MOD BY @TrnDravix >", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=255,G=255,B=255,A=255}, true, false, true, nil, 1.0, true)
+end
 end
 
 pcall(function()
@@ -3012,7 +2946,7 @@ _G.InitModMenuTab = function()
         local AliasMap = require("client.slua.umg.NewSetting.Item.AliasMap")
 
         local ModMenuStack = {
-            { UI = AliasMap.Title, Text = "ADITYA_ORG SETTINGS" },
+            { UI = AliasMap.Title, Text = "TrnDravix SETTINGS" },
 
             -- === FEATURES ===
             {
@@ -3092,104 +3026,9 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            
--- ===== CHAMS COLOR CONTROLS =====
-{
-    Key = "Title_ESP_Colors",
-    UI = AliasMap.Title,
-    Text = "CHAMS COLORS"
-},
-{
-    Key = "ModMenu_GreenColor",
-    UI = AliasMap.Switcher,
-    Text = "GREEN (Visible)",
-    GetFunc = function() return _G.Mod_Chams_GreenEnabled or false end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_GreenEnabled = value
-        print("[MOD] GREEN CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
-        return true
-    end
-},
-{
-    Key = "ModMenu_GreenR",
-    UI = AliasMap.Slider,
-    Text = "Green - Red (0-255)",
-    GetFunc = function() return (_G.Mod_Chams_GreenRGB.R or 0) / 255 end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_GreenRGB.R = math.floor(value * 255)
-        print("[MOD] Green-R: " .. _G.Mod_Chams_GreenRGB.R)
-        return true
-    end
-},
-{
-    Key = "ModMenu_GreenG",
-    UI = AliasMap.Slider,
-    Text = "Green - Green (0-255)",
-    GetFunc = function() return (_G.Mod_Chams_GreenRGB.G or 255) / 255 end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_GreenRGB.G = math.floor(value * 255)
-        print("[MOD] Green-G: " .. _G.Mod_Chams_GreenRGB.G)
-        return true
-    end
-},
-{
-    Key = "ModMenu_GreenB",
-    UI = AliasMap.Slider,
-    Text = "Green - Blue (0-255)",
-    GetFunc = function() return (_G.Mod_Chams_GreenRGB.B or 0) / 255 end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_GreenRGB.B = math.floor(value * 255)
-        print("[MOD] Green-B: " .. _G.Mod_Chams_GreenRGB.B)
-        return true
-    end
-},
-{
-    Key = "ModMenu_YellowColor",
-    UI = AliasMap.Switcher,
-    Text = "YELLOW (Hidden)",
-    GetFunc = function() return _G.Mod_Chams_YellowEnabled or false end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_YellowEnabled = value
-        print("[MOD] YELLOW CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
-        return true
-    end
-},
-{
-    Key = "ModMenu_YellowR",
-    UI = AliasMap.Slider,
-    Text = "Yellow - Red (0-255)",
-    GetFunc = function() return (_G.Mod_Chams_YellowRGB.R or 255) / 255 end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_YellowRGB.R = math.floor(value * 255)
-        print("[MOD] Yellow-R: " .. _G.Mod_Chams_YellowRGB.R)
-        return true
-    end
-},
-{
-    Key = "ModMenu_YellowG",
-    UI = AliasMap.Slider,
-    Text = "Yellow - Green (0-255)",
-    GetFunc = function() return (_G.Mod_Chams_YellowRGB.G or 255) / 255 end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_YellowRGB.G = math.floor(value * 255)
-        print("[MOD] Yellow-G: " .. _G.Mod_Chams_YellowRGB.G)
-        return true
-    end
-},
-{
-    Key = "ModMenu_YellowB",
-    UI = AliasMap.Slider,
-    Text = "Yellow - Blue (0-255)",
-    GetFunc = function() return (_G.Mod_Chams_YellowRGB.B or 0) / 255 end,
-    SetFunc = function(_, value)
-        _G.Mod_Chams_YellowRGB.B = math.floor(value * 255)
-        print("[MOD] Yellow-B: " .. _G.Mod_Chams_YellowRGB.B)
-        return true
-    end
-},
 
             -- === SCENE OPTIONS ===
-            { UI = AliasMap.Title, Text = "--- SCENE OPTIONS ---" },
+            { UI = AliasMap.Title, Text = "--- OTHERS OPTIONS ---" },
 
             {
                 Key = "ESP_BlackSky",
@@ -3202,8 +3041,7 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            
-            -- RAIN TOGGLE (ISKO DAALO)
+                        -- RAIN TOGGLE (ISKO DAALO)
 {
     Key = "ESP_RainEnabled",
     UI = AliasMap.TitleSwitcher,
@@ -3227,6 +3065,7 @@ _G.InitModMenuTab = function()
         return true
     end
 },
+            
             {
                 Key = "ESP_RemoveFog",
                 UI = AliasMap.TitleSwitcher,
@@ -3284,9 +3123,9 @@ _G.InitModMenuTab = function()
             }
         }
 
-SettingPageDefine.ModMenu = {
+        SettingPageDefine.ModMenu = {
             Key = "ModMenu",
-            loc = "ADITYA_ORG MENU",
+            loc = "TrnDravix MENU",
             UIKey = "Setting_Page_Privacy",
             Category = {
                 {
@@ -3364,19 +3203,26 @@ pcall(function()
 end)
 
 -- ==================== WELCOME POPUP ====================
+-- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
+-- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
+-- ==================== WELCOME POPUP (SYMBOLS ONLY) ====================
+-- ==================== WELCOME POPUP (ULTIMATE PRO) ====================
 function _G.TryShowWelcome()
     pcall(function()
-        local CommonMsgBoxMgr = require("client.slua.logic.common.logic_common_msg_box")
-        if not CommonMsgBoxMgr then return end
-        local activeStatus = "DRAVIX ENGINE Menu & Status\n"
-        activeStatus = activeStatus .. "\nWeapon Skins: Active"
-        activeStatus = activeStatus .. "\nKill Counter: Active"
-        activeStatus = activeStatus .. "\nOutfit Skins: Active"
-        activeStatus = activeStatus .. "\nLobby Theme: Active"
-        activeStatus = activeStatus .. "\nDeadBox Skins: Active"
-        activeStatus = activeStatus .. "\nVehicle Skins: Active"
-        activeStatus = activeStatus .. "\n\nConfigure your values in config.ini and changes will apply automatically without UI hooks.\n\nEnjoy DravixEngine!"
-        CommonMsgBoxMgr.Show(1, "DRAVIX ENGINE MENU", activeStatus, function() end)
+        local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
+        if not Msg then Msg = require("client.slua.logic.common.logic_common_msg_box") end
+        local Web = require("client.slua.logic.url.logic_webview_sdk")
+        local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
+        if Msg and Msg.Show then
+            Msg.Show(4, "» TrnDravix – ELITE ULTIMATE «",
+            "\n» Developer  : @TrnDravix\n" ..
+            "» Status     : ONLINE & ACTIVE\n" ..
+            "» Protection : 5-Layer Deep Shield\n" ..
+            "» Build      : PREMIUM LOADED\n\n" ..
+            "---------------------------------------\n" ..
+            "  [ Tap to Connect with Developer ]\n" ..
+            "---------------------------------------", onClick)
+        end
         _G.WelcomeShown = true
     end)
 end
