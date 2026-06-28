@@ -3326,33 +3326,33 @@ _G.InitModMenuTab = function()
             }
         }
     }
-        } -- SettingPageDefine.ModMenu close
+           } -- SettingPageDefine.ModMenu close
 
         table.insert(SettingCatalog, SettingPageDefine.ModMenu)
     end -- closes 'if not SettingPageDefine.ModMenu then'
 end -- closes '_G.InitModMenuTab = function()'
 
-    local UIManager = _G.UIManager
-    if UIManager and not UIManager._IsModMenuHooked then
-        local old_ShowUI = UIManager.ShowUI
-        UIManager.ShowUI = function(config, ...)
-            local args = {...}
-            if config and config.keyName and (string.find(string.lower(config.keyName), "setting_main") or string.find(string.lower(config.keyName), "setting")) then
-                local catalog = args[1]
-                if catalog and (type(catalog) == "table" or type(catalog) == "userdata") then
-                    local hasModMenu = false
-                    local newCatalog = {}
-                    for _, page in ipairs(catalog) do
-                        table.insert(newCatalog, page)
-                        if page.Key == "ModMenu" then
-                            hasModMenu = true
-                        end
+-- ==================== UIMANAGER HOOK (MENU INJECTION) ====================
+local UIManager = _G.UIManager
+if UIManager and not UIManager._IsModMenuHooked then
+    local old_ShowUI = UIManager.ShowUI
+    UIManager.ShowUI = function(config, ...)
+        local args = {...}
+        if config and config.keyName and (string.find(string.lower(config.keyName), "setting_main") or string.find(string.lower(config.keyName), "setting")) then
+            local catalog = args[1]
+            if catalog and (type(catalog) == "table" or type(catalog) == "userdata") then
+                local hasModMenu = false
+                local newCatalog = {}
+                for _, page in ipairs(catalog) do
+                    table.insert(newCatalog, page)
+                    if page.Key == "ModMenu" then
+                        hasModMenu = true
                     end
+                end
 
-                    if not hasModMenu then
-                        table.insert(newCatalog, SettingPageDefine.ModMenu)
-                        args[1] = newCatalog
-                    end
+                if not hasModMenu then
+                    table.insert(newCatalog, SettingPageDefine.ModMenu)
+                    args[1] = newCatalog
                 end
             end
             local table_unpack = table.unpack or unpack
@@ -3396,10 +3396,6 @@ pcall(function()
 end)
 
 -- ==================== WELCOME POPUP ====================
--- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
--- ==================== WELCOME POPUP (TRNDRAVIX ELITE EDITION) ====================
--- ==================== WELCOME POPUP (SYMBOLS ONLY) ====================
--- ==================== WELCOME POPUP (ULTIMATE PRO) ====================
 function _G.TryShowWelcome()
     pcall(function()
         local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
