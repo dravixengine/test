@@ -3234,37 +3234,36 @@ _G.InitModMenuTab = function()
         }
 
         SettingPageDefine.ModMenu = {
-            Key = "ModMenu",
-            loc = "TrnDravix MENU",
-            UIKey = "Setting_Page_Privacy",
-            Category = {
+    Key = "ModMenu",
+    loc = "TrnDravix MENU",
+    UIKey = "Setting_Page_Privacy",
+    Category = {
+        {
+            Key = "ModMenu_Main",
+            loc = "ALL FEATURES",
+            Stack = ModMenuStack
+        },
+        {
+            Key = "ModMenu_Memory",
+            loc = "Memory Features",
+            Stack = {
+                { UI = AliasMap.Title, Text = "Memory Tweaks" },
                 {
-                    Key = "ModMenu_Main",
-                    loc = "ALL FEATURES",
-                    Stack = ModMenuStack
-                },
-                
-                    -- Second category (NEW)
-    {
-        Key = "ModMenu_Memory",
-        loc = "Memory Features",
-        Stack = {
-            { UI = AliasMap.Title, Text = "Memory Tweaks" },
-            {
-                Key = "Memory_Aimbot_Example",
-                UI = AliasMap.Switcher,
-                Text = "AIMBOT (Example)",
-                GetFunc = function() return _G.Mod_Aimbot_Enabled or false end,
-                SetFunc = function(_, value)
-                    _G.Mod_Aimbot_Enabled = value
-                    print("[MEMORY] AIMBOT: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            }
+                    Key = "Memory_Aimbot_Example",
+                    UI = AliasMap.Switcher,
+                    Text = "AIMBOT (Example)",
+                    GetFunc = function() return _G.Mod_Aimbot_Enabled or false end,
+                    SetFunc = function(_, value)
+                        _G.Mod_Aimbot_Enabled = value
+                        print("[MEMORY] AIMBOT: " .. (value and "ON ✓" or "OFF ✗"))
+                        return true
+                    end
+                }
             }
         }
-
-        table.insert(SettingCatalog, SettingPageDefine.ModMenu)
+    }
+}
+table.insert(SettingCatalog, SettingPageDefine.ModMenu)
     end
 
     local UIManager = _G.UIManager
