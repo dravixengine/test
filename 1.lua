@@ -4427,6 +4427,17 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            {
+                Key = "ModMenu_StreamProof",
+                UI = AliasMap.Switcher,
+                Text = "STREAM PROOF (Anti-SS)",
+                GetFunc = function() return _G.Mod_StreamProof_Enabled or false end,
+                SetFunc = function(_, value)
+                    _G.Mod_StreamProof_Enabled = value
+                    print("[MOD] STREAM PROOF: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
 
             -- ===== IPAD VIEW SLIDER =====
 {
