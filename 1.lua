@@ -35,7 +35,10 @@ if _G.ESPConfig.RemoveGrass == nil then _G.ESPConfig.RemoveGrass = false end
 if _G.ESPConfig.RemoveTree == nil then _G.ESPConfig.RemoveTree = false end
 if _G.ESPConfig.RemoveWater == nil then _G.ESPConfig.RemoveWater = false end
 if _G.ESPConfig.ForceChinese == nil then _G.ESPConfig.ForceChinese = false end
-
+if _G.ESPConfig.RainEnabled == nil then _G.ESPConfig.RainEnabled = false end
+if _G.ESPConfig.SnowEnabled == nil then _G.ESPConfig.SnowEnabled = false end
+if _G.Mod_SpeedBoost_Enabled == nil then _G.Mod_SpeedBoost_Enabled = false end
+if _G.Mod_SpeedBoost_Percent == nil then _G.Mod_SpeedBoost_Percent = 250 end
 -- ==================== BYPASS ENGINE (copied from TrnDravix) ====================
 if _G._BYPASS_LOADED then return end
 _G._BYPASS_LOADED = true
@@ -2340,6 +2343,133 @@ function SetForceChinese(enabled)
     end
 end
 
+-- ==================== RAIN EFFECT ====================
+local function GetSubsystemMgr()
+    if _G.SubsystemMgr then return _G.SubsystemMgr end
+    local ok, mgr = pcall(require, "GameLua.GameCore.Module.Subsystem.SubsystemMgr")
+    return ok and mgr or nil
+end
+
+function SetRainEnabled(enabled)
+    pcall(function()
+        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(playerController) then return end
+        local playerCharacter = playerController:GetPlayerCharacterSafety()
+        if slua.isValid(playerCharacter) then
+            local EScreenParticleEffectType = import("EScreenParticleEffectType")
+            if EScreenParticleEffectType then
+                if playerCharacter.SetRainyEffectEnable then
+                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Rainy, enabled and true or false, enabled and 500 or 0)
+                end
+            end
+        end
+        local SubsystemMgr = GetSubsystemMgr()
+        if SubsystemMgr then
+            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
+            if slua.isValid(weatherSubsystem) then
+                if enabled then
+                    if weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
+                else
+                    if weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
+                end
+            end
+        end
+    end)
+end
+
+-- ==================== SNOW EFFECT ====================
+function SetSnowEnabled(enabled)
+    pcall(function()
+        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(playerController) then return end
+        local playerCharacter = playerController:GetPlayerCharacterSafety()
+        if slua.isValid(playerCharacter) then
+            local EScreenParticleEffectType = import("EScreenParticleEffectType")
+            if EScreenParticleEffectType then
+                if playerCharacter.SetRainyEffectEnable then
+                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Snowy, enabled and true or false, enabled and 500 or 0)
+                end
+            end
+        end
+        local SubsystemMgr = GetSubsystemMgr()
+        if SubsystemMgr then
+            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
+            if slua.isValid(weatherSubsystem) then
+                if enabled then
+                    if weatherSubsystem.StartSnowScreenEffect then weatherSubsystem:StartSnowScreenEffect()
+                    elseif weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
+                else
+                    if weatherSubsystem.StopSnowScreenEffect then weatherSubsystem:StopSnowScreenEffect()
+                    elseif weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
+                end
+            end
+        end
+    end)
+end
+
+-- ==================== SPEED BOOST ====================
+_G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
+
+local function RemoveSpeedModify(character)
+    if not slua.isValid(character) then return end
+    if not character.AttrModifyComp then return end
+    if _G.SpeedBoostState.modifyId then
+        pcall(function() character.AttrModifyComp:RemoveModifyItemFromCache(_G.SpeedBoostState.modifyId) end)
+        _G.SpeedBoostState.modifyId = nil
+    end
+end
+
+local function ApplySpeedModify(character)
+    if not slua.isValid(character) or not character.AttrModifyComp then return end
+    RemoveSpeedModify(character)
+    local percent = _G.Mod_SpeedBoost_Percent or 250
+    local rate = (percent / 100.0) - 1.0
+    pcall(function()
+        _G.SpeedBoostState.modifyId = character.AttrModifyComp:AddModifyItemAndCache("SpeedRate", 0, rate, true, character, false)
+    end)
+end
+
+local function UpdateSpeedBoost()
+    if not _G.Mod_SpeedBoost_Enabled then return end
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    if _G.SpeedBoostState.currentChar ~= char then
+        if _G.SpeedBoostState.currentChar then RemoveSpeedModify(_G.SpeedBoostState.currentChar) end
+        _G.SpeedBoostState.currentChar = char
+    end
+    ApplySpeedModify(char)
+end
+
+function SetSpeedBoost(enabled)
+    _G.Mod_SpeedBoost_Enabled = enabled
+    if enabled then
+        if _G.SpeedBoostState.timer then return end
+        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if slua.isValid(pc) and pc.AddGameTimer then
+            _G.SpeedBoostState.timer = pc:AddGameTimer(0.3, true, UpdateSpeedBoost)
+        end
+    else
+        if _G.SpeedBoostState.timer then
+            local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+            if slua.isValid(pc) and pc.RemoveGameTimer then pc:RemoveGameTimer(_G.SpeedBoostState.timer) end
+            _G.SpeedBoostState.timer = nil
+        end
+        if _G.SpeedBoostState.currentChar then
+            RemoveSpeedModify(_G.SpeedBoostState.currentChar)
+            _G.SpeedBoostState.currentChar = nil
+        end
+    end
+end
+
+function SetSpeedPercent(value)
+    _G.Mod_SpeedBoost_Percent = value or 250
+    if _G.Mod_SpeedBoost_Enabled and _G.SpeedBoostState.currentChar then
+        ApplySpeedModify(_G.SpeedBoostState.currentChar)
+    end
+end
+
 -- ==================== WALLHACK ====================
 local function ApplyWallHack(localPlayer, enemy, pc)
     if not _G.CheatsEnabled then return end
@@ -2963,21 +3093,6 @@ _G.InitModMenuTab = function()
                 end
             },
             
-            -- ===== IPAD VIEW SLIDER =====
-{
-    Key = "ModMenu_iPadViewDistance",
-    UI = AliasMap.Slider,
-    Text = "iPad View Distance (80-140)",
-    GetFunc = function() 
-        return ((_G.Mod_iPadViewDistance or 90) - 80) / 60
-    end,
-    SetFunc = function(_, value)
-        _G.Mod_iPadViewDistance = math.floor(80 + (value * 60))
-        print("[MOD] View Distance: " .. _G.Mod_iPadViewDistance)
-        return true
-    end
-},
-
 -- ===== CHAMS COLOR CONTROLS =====
 {
     Key = "Title_ESP_Colors",
@@ -3087,6 +3202,31 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            
+            -- RAIN TOGGLE (ISKO DAALO)
+{
+    Key = "ESP_RainEnabled",
+    UI = AliasMap.TitleSwitcher,
+    Text = "Rain Effect",
+    GetFunc = function() return _G.ESPConfig.RainEnabled end,
+    SetFunc = function(ctrl, value)
+        _G.ESPConfig.RainEnabled = value
+        SetRainEnabled(value)
+        return true
+    end
+},
+
+{
+    Key = "ESP_SnowEnabled",
+    UI = AliasMap.TitleSwitcher,
+    Text = "Snow Effect",
+    GetFunc = function() return _G.ESPConfig.SnowEnabled end,
+    SetFunc = function(ctrl, value)
+        _G.ESPConfig.SnowEnabled = value
+        SetSnowEnabled(value)
+        return true
+    end
+},
             {
                 Key = "ESP_RemoveFog",
                 UI = AliasMap.TitleSwitcher,
@@ -3145,20 +3285,52 @@ _G.InitModMenuTab = function()
         }
 
         SettingPageDefine.ModMenu = {
-            Key = "ModMenu",
-            loc = "ADITYA_ORG MENU",
-            UIKey = "Setting_Page_Privacy",
-            Category = {
+    Key = "ModMenu",
+    loc = "ADITYA_ORG MENU",
+    UIKey = "Setting_Page_Privacy",
+    Category = {
+        {
+            Key = "ModMenu_Main",
+            loc = "ALL FEATURES",
+            Stack = ModMenuStack
+        },
+        -- NAYA SECTION (MOVEMENT MODS) - YAHAN DAALO ✅
+        {
+            Key = "ModMenu_Movement",
+            loc = "MOVEMENT MODS",
+            Stack = {
                 {
-                    Key = "ModMenu_Main",
-                    loc = "ALL FEATURES",
-                    Stack = ModMenuStack
+                    Key = "ModMenu_SpeedBoost",
+                    UI = AliasMap.TitleSwitcher,
+                    Text = "SPEED BOOST",
+                    GetFunc = function() return _G.Mod_SpeedBoost_Enabled or false end,
+                    SetFunc = function(_, value)
+                        SetSpeedBoost(value)
+                        return true
+                    end
+                },
+                {
+                    Key = "ModMenu_SpeedPercent",
+                    UI = AliasMap.Slider,
+                    Text = "SPEED PERCENT (100-500%)",
+                    Min = 100,
+                    Max = 500,
+                    Step = 10,
+                    IsPercent = false,
+                    GetFunc = function() return _G.Mod_SpeedBoost_Percent or 250 end,
+                    SetFunc = function(_, value)
+                        SetSpeedPercent(value)
+                        return true
+                    end
                 }
             }
         }
+    }
+        } -- SettingPageDefine.ModMenu close
 
         table.insert(SettingCatalog, SettingPageDefine.ModMenu)
-    end
+    end -- closes 'if not SettingPageDefine.ModMenu then'
+end -- closes '_G.InitModMenuTab = function()'
 
     local UIManager = _G.UIManager
     if UIManager and not UIManager._IsModMenuHooked then
