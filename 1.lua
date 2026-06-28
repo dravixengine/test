@@ -3242,7 +3242,25 @@ _G.InitModMenuTab = function()
                     Key = "ModMenu_Main",
                     loc = "ALL FEATURES",
                     Stack = ModMenuStack
-                }
+                },
+                
+                    -- Second category (NEW)
+    {
+        Key = "ModMenu_Memory",
+        loc = "Memory Features",
+        Stack = {
+            { UI = AliasMap.Title, Text = "Memory Tweaks" },
+            {
+                Key = "Memory_Aimbot_Example",
+                UI = AliasMap.Switcher,
+                Text = "AIMBOT (Example)",
+                GetFunc = function() return _G.Mod_Aimbot_Enabled or false end,
+                SetFunc = function(_, value)
+                    _G.Mod_Aimbot_Enabled = value
+                    print("[MEMORY] AIMBOT: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            }
             }
         }
 
