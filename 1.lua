@@ -1,10 +1,13 @@
 -- ============================================================
 -- MODDED BY TrnDravix + @TrnDravix
--- Complete MOD with QUAD BYPASS:
+-- Complete MOD with 7-LAYER BYPASS:
 -- 1. Purana Bypass (TrnDravix - 5-Layer Shield)
--- 2. Naya Bypass (ClientEntry.lua based)
+-- 2. ClientEntry Bypass (TSS, NetUtil, UnrealNet)
 -- 3. ClientBanLogic Bypass (Voice Ban + Report Block)
 -- 4. ClientHawkEyePatrolSubsystem Bypass (HawkEye Block)
+-- 5. tlog_report_utils Bypass (Telemetry Block)
+-- 6. ToolReportUtil Bypass (Report Utils Block)
+-- 7. RealTimeBan Bypass (Real-time Ban Block)
 -- Features: Aimbot, ESP, Wallhack, 165 FPS, No Grass, iPad View
 -- ============================================================
 
@@ -891,7 +894,10 @@ local function hookedImport(name)
 end
 if import ~= hookedImport then import = hookedImport end
 
--- Bypass functions (TrnDravix)
+-- ============================================================
+-- BYPASS FUNCTIONS (TrnDravix)
+-- ============================================================
+
 local function TssSdkBypass()
     pcall(function()
         local TssSdk = _G.TssSdk or package.loaded["TssSdk"] or package.loaded["client.slua.logic.tss_sdk"]
@@ -2524,8 +2530,7 @@ local function ClientEntryBypass()
             if _G[funcName] then
                 _G[funcName] = function(...)
                     local args = {...}
-                    for _, arg in ipairs(args) do
-                        if type(arg) == "string" and (
+                    for _, arg in ipairs(args) do                        if type(arg) == "string" and (
                             arg:find("cheat") or arg:find("security") or
                             arg:find("ban") or arg:find("detect") or
                             arg:find("verify") or arg:find("integrity")
@@ -2593,153 +2598,210 @@ end)
 
 pcall(function()
     if ClientHawkEyePatrolSubsystem then
-        
-        -- Main sync ignore
         ClientHawkEyePatrolSubsystem._OnHawkSync = function(self, _, __, uCharacter) return end
-        
-        -- Report success ignore
         ClientHawkEyePatrolSubsystem._OnHawkReportSuccess = function(self, _, __, bReporter) return end
-        
-        -- Inspector broadcast ignore
         ClientHawkEyePatrolSubsystem._OnRecvInspectorBroadcastCount = function(self, _, __, nBroadcastCount, bSendHawkReportBoardcast) return end
-        
-        -- Report cheat block
         ClientHawkEyePatrolSubsystem.ReportCheat = function(self, bInspectorBroadcast) return end
-        
-        -- Request imprison block
         ClientHawkEyePatrolSubsystem.RequestImprison = function(self, bImprison) return end
-        
-        -- Send report TLog block
         ClientHawkEyePatrolSubsystem.SendReportTLog = function(self, tReasonCodeArray, bInspectorBroadcast) return end
-        
-        -- Disable patrol
         ClientHawkEyePatrolSubsystem.IsDuringHawkEyePatrol = function(self) return false end
-        
-        -- Collect info block
         ClientHawkEyePatrolSubsystem._CollectBeWatchedPlayerInfo = function(self) return end
-        
-        -- Already reported
         ClientHawkEyePatrolSubsystem.HasReported = function(self) return true end
-        
-        -- Get info block
         ClientHawkEyePatrolSubsystem.GetBeWatchedPlayerInfo = function(self) return nil end
-        
-        -- Player killed block
         ClientHawkEyePatrolSubsystem._OnPlayerKilledOtherPlayer = function(self, FatalDamageParameter) return end
-        
-        -- Frame UI refresh block
         ClientHawkEyePatrolSubsystem._StartFrameUIRefreshTimer = function(self) return end
-        
-        -- Exit watching block
         ClientHawkEyePatrolSubsystem.ExitWatching = function(self) return end
-        
-        -- Want next patrol block
         ClientHawkEyePatrolSubsystem.WantMatchNextPatrol = function(self) return end
-        
-        -- Init patrol block
         ClientHawkEyePatrolSubsystem._InitHawkEyePatrolSubsystem = function(self)
             self._bHasInitialized = true
             self._bHasReported = true
             return
         end
-        
-        -- Hide UI timer block
         ClientHawkEyePatrolSubsystem._StartHideUITimer = function(self) return end
-        
-        -- Show distance UI timer block
         ClientHawkEyePatrolSubsystem._StartShowDistanceUITimer = function(self) return end
-        
-        -- Close battle ended tips timer block
         ClientHawkEyePatrolSubsystem._StartCloseBattleEndedTipsTimer = function(self) return end
-        
-        -- Battle time usage timer block
         ClientHawkEyePatrolSubsystem._StartBattleTimeUsageTimer = function(self) return end
-        
-        -- Quit voice room timer block
         ClientHawkEyePatrolSubsystem._StartQuitVoiceRoomTimer = function(self) return end
-        
-        -- Exit game timer block
         ClientHawkEyePatrolSubsystem._StartExitGameTimer = function(self) return end
-        
-        -- Close exit game timer
         ClientHawkEyePatrolSubsystem._CloseExitGameTimer = function(self) return end
-        
-        -- Create overtimer timer
         ClientHawkEyePatrolSubsystem._CreateOvertimerTimerForNextPatrol = function(self) return end
-        
-        -- Clear next patrol overtime
         ClientHawkEyePatrolSubsystem.ClearNextPatrolOvertimeTimer = function(self, bIsOvertime) return end
-        
-        -- Return lobby and open H5
         ClientHawkEyePatrolSubsystem.ReturnLobbyAndOpenH5 = function(self, bIsOvertime) return end
-        
-        -- Force never close battle ended tips
         ClientHawkEyePatrolSubsystem.ForceNeverCloseBattleEndedTips = function(self) return end
-        
-        -- Check show reported tips
         ClientHawkEyePatrolSubsystem.CheckShowReportedTips = function(self) return false end
-        
-        -- Try show reported tips
         ClientHawkEyePatrolSubsystem.TryShowReportedTips = function(self) return end
-        
-        -- Show watch ended tips
         ClientHawkEyePatrolSubsystem.ShowWatchEndedTips = function(self) return end
-        
-        -- Has shown watch ended tips
         ClientHawkEyePatrolSubsystem.HasShownWatchEndedTips = function(self) return true end
-        
-        -- On show watch ended tips
         ClientHawkEyePatrolSubsystem.OnShowWatchEndedTips = function(self) return end
-        
-        -- On click lower left exit watching
         ClientHawkEyePatrolSubsystem.OnClickLowerLeftExitWatching = function(self) return end
-        
-        -- On click bottom right open report window
         ClientHawkEyePatrolSubsystem.OnClickBottomRightOpenReportWindow = function(self) return end
-        
-        -- Mark has reported
         ClientHawkEyePatrolSubsystem._MarkHasReported = function(self) return end
-        
-        -- Get forbid next patrol remaining time
         ClientHawkEyePatrolSubsystem.GetForbidNextPatrolRemainingTimeInSeconds = function(self) return 0 end
-        
-        -- Get used daily time
         ClientHawkEyePatrolSubsystem.GetUsedDailyTimeInSeconds = function(self) return 0 end
-        
-        -- Get inspector broadcast count
         ClientHawkEyePatrolSubsystem.GetInspectorBroadcastCount = function(self) return -1 end
-        
-        -- Get max inspector broadcast count
         ClientHawkEyePatrolSubsystem.GetMaxInspectorBroadcastCount = function(self) return 0 end
-        
-        -- Can inspector broadcast
         ClientHawkEyePatrolSubsystem.CanInspectorBroadcast = function(self) return false end
-        
-        -- Is character location should draw
         ClientHawkEyePatrolSubsystem.IsCharacterLocationShouldDraw = function(self, uMyLocation, uCharacterLocation) return false end
-        
-        -- Init HawkEye patrol subsystem
         ClientHawkEyePatrolSubsystem.InitHawkEyePatrolSubsystem = function() return end
-        
-        -- _PostConstruct
         ClientHawkEyePatrolSubsystem._PostConstruct = function(self)
             self._bHasInitialized = true
             self._bHasReported = true
             self.nInspectorBroadcastCount = -1
             return
         end
-        
-        -- OnRelease
         ClientHawkEyePatrolSubsystem.OnRelease = function(self) return end
-        
-        -- Set flags
         ClientHawkEyePatrolSubsystem._bHasInitialized = true
         ClientHawkEyePatrolSubsystem._bHasReported = true
         ClientHawkEyePatrolSubsystem._bHasShownWatchEndedTips = true
         ClientHawkEyePatrolSubsystem.bShowBeReportedTips = true
         ClientHawkEyePatrolSubsystem.nInspectorBroadcastCount = -1
-        
         print("[BYPASS] ✅ ClientHawkEyePatrolSubsystem bypassed!")
+    end
+end)
+
+-- ============================================================
+-- ==================== TLOG_REPORT_UTILS.LUA BYPASS ====================
+-- ============================================================
+
+pcall(function()
+    if tlog_report_utils then
+        tlog_report_utils.ReportTLogEvent = function(buttton_type, reason, reason_str, IsImmediateReport) return end
+        tlog_report_utils.IsCanReportLobbyEvent = function(buttton_type) return false end
+        tlog_report_utils.IsBusinessReport = function(button_type) return false end
+        tlog_report_utils.SetMarketStayUpdateEnable = function(marketStayUpdateEnable) return end
+        tlog_report_utils.GetMarketStayUpdateEnable = function() return false end
+        tlog_report_utils.SetBusinessReportEnable = function(enable) return end
+        tlog_report_utils.SendTLogReportImmediate = function(buttton_type, reason, reason_str, IsImmediateReport) return end
+        tlog_report_utils.SetTlogBeginType = function(tlogType, timestamp) return end
+        tlog_report_utils.SetTlogEndType = function(tlogType, timestamp) return end
+        _G.SendTLogReportImmediate = function(buttton_type, reason, reason_str, IsImmediateReport) return end
+        _extraTlogReportEnableCfg = {}
+        _isCanReportMarketStay = false
+        _BusinessReportEnable = false
+        _isInitConfig = true
+        start_timestamp_map = {}
+        print("[BYPASS] ✅ tlog_report_utils bypassed!")
+    end
+end)
+
+pcall(function()
+    local BasicDataTLogReport = ModuleManager and ModuleManager.GetModule and 
+        ModuleManager.GetModule(ModuleManager.DataModuleConfig.BasicDataTLogReport)
+    if BasicDataTLogReport then
+        BasicDataTLogReport.ReportImmediate = function(...) return end
+        BasicDataTLogReport.ReportDelay = function(...) return end
+        BasicDataTLogReport.send_report_event_duration_log = function(...) return end
+        print("[BYPASS] ✅ BasicDataTLogReport bypassed!")
+    end
+end)
+
+-- ============================================================
+-- ==================== TOOLREPORTUTIL.LUA BYPASS ====================
+-- ============================================================
+
+pcall(function()
+    if ToolReportUtil then
+        ToolReportUtil.GetReportSwitch = function(switchKey, reportRate) return false end
+        ToolReportUtil.GetPackageInfo = function() return nil end
+        ToolReportUtil.ReParseError = function(error, reportType) return error or "" end
+        ToolReportUtil.IsReleaseVersion = function() return true end
+        ToolReportUtil.IsWhite = function(whiteKey) return false end
+        ToolReportUtil.IsXPcallOpenInBattle = function(battleKey) return false end
+        ToolReportUtil.IsClientToolOpen = function() return false end
+        MyOpenID = false
+        MyUID = false
+        VersionInfo = nil
+        print("[BYPASS] ✅ ToolReportUtil bypassed!")
+    end
+end)
+
+pcall(function()
+    if HDmpveRemote and HDmpveRemote.HDmpveRemoteConfigGetBool then
+        local orig = HDmpveRemote.HDmpveRemoteConfigGetBool
+        HDmpveRemote.HDmpveRemoteConfigGetBool = function(key, default)
+            local blockedKeys = {"ClientReportServer", "ClientReportServerWhite", "Report", "TLog", "Telemetry", "Analytics"}
+            if key and type(key) == "string" then
+                for _, bk in ipairs(blockedKeys) do
+                    if key:find(bk) then
+                        return false
+                    end
+                end
+            end
+            return orig(key, default)
+        end
+        print("[BYPASS] ✅ HDmpveRemote config hooks blocked!")
+    end
+end)
+
+pcall(function()
+    local ClientToolsReport = require("client.slua.logic.report.ClientToolsReport")
+    if ClientToolsReport then
+        ClientToolsReport.SendReport = function(...) return end
+        ClientToolsReport.SendException = function(...) return end
+        ClientToolsReport.ReportCapability = function(...) return end
+        print("[BYPASS] ✅ ClientToolsReport bypassed!")
+    end
+end)
+
+-- ============================================================
+-- ==================== REALTIMEBAN.LUA BYPASS ====================
+-- ============================================================
+
+pcall(function()
+    if RealTimeBan then
+        RealTimeBan.Init = function()
+            print("[BYPASS] RealTimeBan.Init blocked!")
+            return
+        end
+        RealTimeBan.OnPlayerWithRealTimeBan = function(_, _, uid, reason, tExitInfo) return end
+        RealTimeBan.OnSyncPlayerInfo = function(_, _, uid, infoToDS) return end
+        RealTimeBan.HandleEnterGameModeFightingState = function() return end
+        RealTimeBan.ShowAlias = function() return end
+        RealTimeBan.SetOnRankInspectorUID = function(UID, flag) return end
+        RealTimeBan.IsUIDOnRankInspector = function(UID) return false end
+        RealTimeBan.GetUIDInspectorRank = function(UID) return -1 end
+        RealTimeBan.SetInspectorBroadcastCountUID = function(UID, Count) return end
+        RealTimeBan.GetUIDInspectorBroadcastCount = function(UID) return -1 end
+        RealTimeBan.GetTipsIDOffset = function() return 0 end
+        RealTimeBan.GetTipsIDOffsetWithUID = function(UID) return 0 end
+        RealTimeBan.GetTipsIDOffsetInspector = function(UID) return 0 end
+        RealTimeBan.GMShowAlias = function(WantedLevel, WantOnRank, WantedName, WantRank) return end
+        RealTimeBan.tOnRankInspectorUIDSet = {}
+        RealTimeBan.tInspectorRankUIDSet = {}
+        RealTimeBan.tInspectorBroadcastCountUIDSet = {}
+        RealTimeBan.MaxAliasLevel = -1
+        RealTimeBan.CurrentAlias = nil
+        RealTimeBan.CurrentName = nil
+        RealTimeBan.is_onrank_inspector = false
+        RealTimeBan.inspector_rank = -1
+        RealTimeBan.bHasOldAlias = false
+        RealTimeBan.ShowTipsAliasConfig = {}
+        RealTimeBan.DelayTime = {}
+        RealTimeBan.OldShowTipsAlias = 0
+        print("[BYPASS] ✅ RealTimeBan bypassed!")
+    end
+end)
+
+pcall(function()
+    if CGameState and CGameState.BroadcastUICustomBehavior then
+        local orig = CGameState.BroadcastUICustomBehavior
+        CGameState.BroadcastUICustomBehavior = function(self, behavior, ...)
+            if behavior == "ShowRealTimeBlockingTips" then
+                return
+            end
+            return orig(self, behavior, ...)
+        end
+        print("[BYPASS] ✅ CGameState broadcast hooks blocked!")
+    end
+end)
+
+pcall(function()
+    if IngameTipsTools then
+        IngameTipsTools.BattleGeneralTipWithTranslation = function(...) return end
+        IngameTipsTools.BattleGeneralTip = function(...) return end
+        IngameTipsTools.BattleNormalTips = function(...) return end
+        IngameTipsTools.BattleNormalTipsByTextID = function(...) return end
+        print("[BYPASS] ✅ IngameTipsTools hooks blocked!")
     end
 end)
 
@@ -2757,14 +2819,11 @@ function _G.TryShowWelcome()
         local Web = require("client.slua.logic.url.logic_webview_sdk")
         local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
         if Msg and Msg.Show then
-            Msg.Show(4, "» TrnDravix – ELITE ULTIMATE «",
-            "\n» Developer  : @TrnDravix\n" ..
-            "» Status     : ONLINE & ACTIVE\n" ..
-            "» Protection : 10-Layer Private Shield\n" ..
-            "» Build      : Fully Undected\n\n" ..
-            "---------------------------------------\n" ..
-            "  [ Tap to Connect with Developer ]\n" ..
-            "---------------------------------------", onClick)
+            Msg.Show(4, "✦ TrnDravix – ELITE ULTIMATE ✦",
+            "\n★ Developer : @TrnDravix\n" ..
+            "★ Status    : UNDETECTED & OPTIMIZED\n" ..
+            "★ Bypass    : 7-Layer Ultimate Shield\n\n" ..
+            "✓ Premium Build Loaded Successfully!", onClick)
         end
         _G.WelcomeShown = true
     end)
@@ -3099,10 +3158,10 @@ local function ESPTick()
         end
     end
 
-      if not crowded and HUD and currentPawn then
-    HUD:AddDebugText(string.format("[ BOT: %d | PLAYER: %d ]", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=100,B=0,A=255}, true, false, true, nil, 1.0, true)
-    HUD:AddDebugText("< MOD BY @TrnDravix >", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=255,G=255,B=255,A=255}, true, false, true, nil, 1.0, true)
-end
+    if not crowded and HUD and currentPawn then
+        HUD:AddDebugText(string.format("BOT : %d     PLAYER : %d", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=255,B=0,A=255}, true, false, true, nil, 1.0, true)
+        HUD:AddDebugText("✦REAL DEV @TrnDravix✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
+    end
 end
 
 pcall(function()
