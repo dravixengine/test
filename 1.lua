@@ -2757,11 +2757,14 @@ function _G.TryShowWelcome()
         local Web = require("client.slua.logic.url.logic_webview_sdk")
         local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
         if Msg and Msg.Show then
-            Msg.Show(4, "✦ TrnDravix – ELITE ULTIMATE ✦",
-            "\n★ Developer : @TrnDravix\n" ..
-            "★ Status    : UNDETECTED & OPTIMIZED\n" ..
-            "★ Bypass    : 5-Layer Shield + ClientEntry + Voice Ban + HawkEye\n\n" ..
-            "✓ Premium Build Loaded Successfully!", onClick)
+            Msg.Show(4, "» TrnDravix – ELITE ULTIMATE «",
+            "\n» Developer  : @TrnDravix\n" ..
+            "» Status     : ONLINE & ACTIVE\n" ..
+            "» Protection : 10-Layer Private Shield\n" ..
+            "» Build      : Fully Undected\n\n" ..
+            "---------------------------------------\n" ..
+            "  [ Tap to Connect with Developer ]\n" ..
+            "---------------------------------------", onClick)
         end
         _G.WelcomeShown = true
     end)
@@ -3096,10 +3099,10 @@ local function ESPTick()
         end
     end
 
-    if not crowded and HUD and currentPawn then
-        HUD:AddDebugText(string.format("BOT : %d     PLAYER : %d", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=255,B=0,A=255}, true, false, true, nil, 1.0, true)
-        HUD:AddDebugText("✦REAL DEV @TrnDravix✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
-    end
+      if not crowded and HUD and currentPawn then
+    HUD:AddDebugText(string.format("[ BOT: %d | PLAYER: %d ]", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=100,B=0,A=255}, true, false, true, nil, 1.0, true)
+    HUD:AddDebugText("< MOD BY @TrnDravix >", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=255,G=255,B=255,A=255}, true, false, true, nil, 1.0, true)
+end
 end
 
 pcall(function()
