@@ -28,6 +28,14 @@ if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
 
 -- ============================================================
+-- CHAMS COLOR CONFIG (ADDED FROM SOURCE)
+-- ============================================================
+if _G.Mod_Chams_GreenEnabled == nil then _G.Mod_Chams_GreenEnabled = false end
+if _G.Mod_Chams_YellowEnabled == nil then _G.Mod_Chams_YellowEnabled = false end
+if _G.Mod_Chams_GreenRGB == nil then _G.Mod_Chams_GreenRGB = {R=0, G=255, B=0, A=255} end
+if _G.Mod_Chams_YellowRGB == nil then _G.Mod_Chams_YellowRGB = {R=255, G=255, B=0, A=255} end
+
+-- ============================================================
 -- WALLHACK COLOR + GLOW CONFIG
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
@@ -258,7 +266,7 @@ pcall(function()
 end)
 
 -- ============================================================
--- ESP
+-- ESP (WITH GREEN/VISIBLE & YELLOW/HIDDEN COLORS)
 -- ============================================================
 local SecurityCommonUtils = require("GameLua.Mod.BaseMod.Common.Security.SecurityCommonUtils")
 local ASTExtraPlayerController = import("/Script/ShadowTrackerExtra.STExtraPlayerController")
@@ -399,13 +407,22 @@ local function ESPTick()
                         local hpText = isKnock and "DOWN" or HPBar(hpPercent)
                         HUD:AddDebugText(hpText, tPawn, TextScale(distM), {X=0,Y=0,Z=hpOffset}, {X=0,Y=0,Z=hpOffset}, hpColor, true, false, true, nil, 1.0, true)
 
+                        -- ===== GREEN/VISIBLE + YELLOW/HIDDEN COLOR LOGIC (FROM SOURCE) =====
                         local nameColor = {R=0,G=255,B=0,A=255}
                         local targetPos = headPos or tPawn:K2_GetActorLocation()
                         pcall(function()
                             if Game:IsTargetPosVisible(myEyePos, targetPos, {currentPawn}) then
-                                nameColor = {R=0,G=255,B=0,A=255}
+                                if _G.Mod_Chams_GreenEnabled then
+                                    nameColor = _G.Mod_Chams_GreenRGB or {R=0,G=255,B=0,A=255}
+                                else
+                                    nameColor = {R=0,G=255,B=0,A=255}
+                                end
                             else
-                                nameColor = {R=255,G=255,B=0,A=255}
+                                if _G.Mod_Chams_YellowEnabled then
+                                    nameColor = _G.Mod_Chams_YellowRGB or {R=255,G=255,B=0,A=255}
+                                else
+                                    nameColor = {R=255,G=255,B=0,A=255}
+                                end
                             end
                         end)
 
@@ -653,7 +670,8 @@ local function ApplyHardAimbot()
                 end
             end
             entity.AutoAimingConfig = entity.AutoAimingConfig
-        end    end)
+        end
+    end)
 end
 
 local function AttachAimbotTimer()
@@ -961,7 +979,7 @@ _G.ChamsCleanup = function()
 end
 
 -- ============================================================
--- MENU (with Glow ON/OFF + Glow Intensity Slider + Scene Features)
+-- MENU (with Glow + Scene + CHAMS COLOR CONTROLS)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -1022,6 +1040,123 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            
+            -- ===== CHAMS COLOR CONTROLS (ADDED FROM SOURCE) =====
+            { UI = AliasMap.Title, Text = "--- CHAMS COLORS ---" },
+            {
+                Key = "ModMenu_GreenColor",
+                UI = AliasMap.Switcher,
+                Text = "GREEN (Visible)",
+                GetFunc = function() return _G.Mod_Chams_GreenEnabled or false end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_GreenEnabled = value
+                    print("[MOD] GREEN CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_GreenR",
+                UI = AliasMap.Slider,
+                Text = "Green - Red (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.Mod_Chams_GreenRGB.R or 0) / 255 end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_GreenRGB.R = math.floor(value * 255)
+                    print("[MOD] Green-R: " .. _G.Mod_Chams_GreenRGB.R)
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_GreenG",
+                UI = AliasMap.Slider,
+                Text = "Green - Green (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.Mod_Chams_GreenRGB.G or 255) / 255 end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_GreenRGB.G = math.floor(value * 255)
+                    print("[MOD] Green-G: " .. _G.Mod_Chams_GreenRGB.G)
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_GreenB",
+                UI = AliasMap.Slider,
+                Text = "Green - Blue (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.Mod_Chams_GreenRGB.B or 0) / 255 end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_GreenRGB.B = math.floor(value * 255)
+                    print("[MOD] Green-B: " .. _G.Mod_Chams_GreenRGB.B)
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_YellowColor",
+                UI = AliasMap.Switcher,
+                Text = "YELLOW (Hidden)",
+                GetFunc = function() return _G.Mod_Chams_YellowEnabled or false end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_YellowEnabled = value
+                    print("[MOD] YELLOW CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_YellowR",
+                UI = AliasMap.Slider,
+                Text = "Yellow - Red (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.Mod_Chams_YellowRGB.R or 255) / 255 end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_YellowRGB.R = math.floor(value * 255)
+                    print("[MOD] Yellow-R: " .. _G.Mod_Chams_YellowRGB.R)
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_YellowG",
+                UI = AliasMap.Slider,
+                Text = "Yellow - Green (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.Mod_Chams_YellowRGB.G or 255) / 255 end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_YellowRGB.G = math.floor(value * 255)
+                    print("[MOD] Yellow-G: " .. _G.Mod_Chams_YellowRGB.G)
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_YellowB",
+                UI = AliasMap.Slider,
+                Text = "Yellow - Blue (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.Mod_Chams_YellowRGB.B or 0) / 255 end,
+                SetFunc = function(_, value)
+                    _G.Mod_Chams_YellowRGB.B = math.floor(value * 255)
+                    print("[MOD] Yellow-B: " .. _G.Mod_Chams_YellowRGB.B)
+                    return true
+                end
+            },
+            -- ===== END CHAMS COLOR CONTROLS =====
+            
             -- ===== WALLHACK SECTION =====
             { UI = AliasMap.Title, Text = "--- WALLHACK ---" },
             {
@@ -1114,7 +1249,7 @@ _G.InitModMenuTab = function()
             -- ===== END GLOW SECTION =====
             -- ===== END WALLHACK SECTION =====
             
-            -- ===== SCENE FEATURES SECTION (ADDED FROM SOURCE) =====
+            -- ===== SCENE FEATURES SECTION =====
             { UI = AliasMap.Title, Text = "--- SCENE EFFECTS ---" },
             {
                 Key = "ESP_BlackSky",
