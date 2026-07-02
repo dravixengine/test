@@ -49,7 +49,6 @@ _G.ESPConfig = _G.ESPConfig or {
     BlackSky = false,
     RainEnabled = false,
     SnowEnabled = false,
-    -- Custom Colors (Default: Green for Visible, Yellow for Invisible)
     UseCustomVisible = false,
     UseCustomInvisible = false,
     CustomVisibleColor = {R=0, G=255, B=0, A=255},
@@ -734,7 +733,7 @@ end)
 --  dead box skins, etc. – all kept as is.)
 
 -- ============================================================
--- ==================== PBC WALLHACK MODULE ====================
+-- ==================== PBC WALLHACK MODULE (FIXED) ===========
 -- ============================================================
 
 _G._ChamsTimer = nil
@@ -763,22 +762,31 @@ local function ChamsSetupConsole()
     end)
 end
 
-local function ChamsApplyToMesh(mesh, isVisible)
+local function ChamsApplyToMesh(mesh, visColor, occColor)
     if not mesh or not slua.isValid(mesh) then return end
     
-    local colorTable = GetWallhackColor(isVisible)
-    local visColor = LinearColor(
-        colorTable.R / 255,
-        colorTable.G / 255,
-        colorTable.B / 255,
+    local LinearColor = import("LinearColor")
+    if not LinearColor then return end
+    
+    -- Convert to LinearColor
+    local visColorNorm = LinearColor(
+        visColor.R / 255,
+        visColor.G / 255,
+        visColor.B / 255,
+        1.0
+    )
+    local occColorNorm = LinearColor(
+        occColor.R / 255,
+        occColor.G / 255,
+        occColor.B / 255,
         1.0
     )
     
     pcall(function()
         mesh:SetDrawDyeing(true)
         mesh:SetDrawDyeingMode(1)
-        mesh:SetVisibleDyeingColor(visColor)
-        mesh:SetOccludedDyeingColor(visColor)
+        mesh:SetVisibleDyeingColor(visColorNorm)
+        mesh:SetOccludedDyeingColor(occColorNorm)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
         
@@ -793,19 +801,23 @@ local function ChamsApplyToMesh(mesh, isVisible)
             end)
         end
     end)
+    
     pcall(function()
         mesh:SetDrawHighlight(true)
-        mesh:OverrideHighlightColor(visColor)
+        mesh:OverrideHighlightColor(visColorNorm)
         mesh:SetHighlightCanBeOccluded(false)
     end)
+    
     pcall(function()
         mesh:SetDrawIdeaOutline(true)
         mesh:SetIdeaOutlineNew(true)
         mesh:SetIdeaOutlineOcclusionHighlight(true)
-        mesh:OverrideIdeaOutlineColor(visColor)
+        mesh:OverrideIdeaOutlineColor(visColorNorm)
+        mesh:SetIdeaOutlineOcclusionColor(occColorNorm)
         mesh:OverrideIdeaOutlineThickness(10.0)
         mesh:SetIdeaOverrideOutlineAndOcclusion(true)
     end)
+    
     pcall(function()
         mesh:SetRenderCustomDepth(true)
         mesh:SetCustomDepthStencilValue(255)
@@ -833,6 +845,39 @@ local function ChamsTick()
 
         ChamsSetupConsole()
 
+        local cfg = _G.ESPConfig
+        
+        -- Get Visible Color
+        local visColor
+        if cfg.UseCustomVisible then
+            visColor = cfg.CustomVisibleColor
+        else
+            visColor = GetColorFromIndex(cfg.WallhackVisibleColor)
+        end
+        
+        -- Get Invisible Color
+        local occColor
+        if cfg.UseCustomInvisible then
+            occColor = cfg.CustomInvisibleColor
+        else
+            occColor = GetColorFromIndex(cfg.WallhackInvisibleColor)
+        end
+        
+        -- Apply brightness
+        local bright = cfg.WallhackBrightness / 25.0
+        visColor = {
+            R = math.min(visColor.R * bright, 255),
+            G = math.min(visColor.G * bright, 255),
+            B = math.min(visColor.B * bright, 255),
+            A = 255
+        }
+        occColor = {
+            R = math.min(occColor.R * bright, 255),
+            G = math.min(occColor.G * bright, 255),
+            B = math.min(occColor.B * bright, 255),
+            A = 255
+        }
+
         _G._ChamsTickCount = _G._ChamsTickCount + 1
         if _G._ChamsTickCount % 6 == 0 then
             _G._ChamsProcessed = {}
@@ -855,11 +900,11 @@ local function ChamsTick()
 
             local isAI = false
             pcall(function() isAI = Game:IsAI(pawn) end)
-            if isAI and not _G.ESPConfig.ShowAI then goto continue end
+            if isAI and not cfg.ShowAI then goto continue end
 
             pcall(function()
                 if slua.isValid(pawn.Mesh) then
-                    ChamsApplyToMesh(pawn.Mesh, true)
+                    ChamsApplyToMesh(pawn.Mesh, visColor, occColor)
                 end
             end)
 
@@ -869,7 +914,7 @@ local function ChamsTick()
                     for _, slot in ipairs(avatarSlots) do
                         local mesh = avatarComp:GetMeshCompBySlot(slot)
                         if slua.isValid(mesh) then
-                            ChamsApplyToMesh(mesh, true)
+                            ChamsApplyToMesh(mesh, visColor, occColor)
                         end
                     end
                 end
@@ -880,7 +925,7 @@ local function ChamsTick()
                 if weapon and slua.isValid(weapon) then
                     local mesh = weapon.Mesh
                     if mesh then
-                        ChamsApplyToMesh(mesh, true)
+                        ChamsApplyToMesh(mesh, visColor, occColor)
                     end
                 end
             end)
@@ -1231,7 +1276,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- Custom Visible Color Toggle + RGB Sliders
             {
                 Key = "WH_UseCustomVisible",
                 UI = AliasMap.TitleSwitcher,
@@ -1297,7 +1341,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- Custom Invisible Color Toggle + RGB Sliders
             {
                 Key = "WH_UseCustomInvisible",
                 UI = AliasMap.TitleSwitcher,
