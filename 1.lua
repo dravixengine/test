@@ -1,5 +1,5 @@
 -- ============================================================
--- MODDED BY TrnDravix + @TrnDravix
+-- MODDED BY ADITYA_ORG + @ADITYA_ORG
 -- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + VEHICLE ESP
 -- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS, Vehicle ESP
 -- Bypass activates on game start with popup
@@ -160,10 +160,10 @@ pcall(function()
     local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
     if not Msg then Msg = require("client.slua.logic.common.logic_common_msg_box") end
     local Web = require("client.slua.logic.url.logic_webview_sdk")
-    local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
+    local function onClick() if Web then Web:OpenURL("https://t.me/ADITYA_ORG") end end
     if Msg and Msg.Show then
-        Msg.Show(4, "✦ TrnDravix – ELITE ULTIMATE ✦",
-        "\n★ Developer : @TrnDravix\n" ..
+        Msg.Show(4, "✦ ADITYA_ORG – ELITE ULTIMATE ✦",
+        "\n★ Developer : @ADITYA_ORG\n" ..
         "★ Status    : UNDETECTED & OPTIMIZED\n" ..
         "★ Bypass    : 5-Layer Deep Shield + All Visuals\n\n" ..
         "✓ Premium Build Loaded Successfully!", onClick)
@@ -331,7 +331,7 @@ local function ESPTick()
 
     if not crowded and HUD and currentPawn then
         HUD:AddDebugText(string.format("BOT : %d     PLAYER : %d", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=150}, {X=0,Y=0,Z=150}, {R=255,G=255,B=0,A=255}, true, false, true, nil, 1.0, true)
-        HUD:AddDebugText("✦REAL DEV @TrnDravix✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
+        HUD:AddDebugText("✦REAL DEV @ADITYA_ORG✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
     end
 end
 
@@ -918,7 +918,7 @@ _G.InitModMenuTab = function()
         local AliasMap = require("client.slua.umg.NewSetting.Item.AliasMap")
 
         local MainStack = {
-            { UI = AliasMap.Title, Text = "TrnDravix SETTINGS" },
+            { UI = AliasMap.Title, Text = "ADITYA_ORG SETTINGS" },
 
             {
                 Key = "ModMenu_Aimbot",
@@ -1077,7 +1077,7 @@ _G.InitModMenuTab = function()
 
         SettingPageDefine.ModMenu = {
             Key = "ModMenu",
-            loc = "TrnDravix MENU",
+            loc = "ADITYA_ORG MENU",
             UIKey = "Setting_Page_Privacy",
             Category = {
                 {
