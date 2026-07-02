@@ -26,6 +26,7 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
+if _G.Mod_LootBox_Enabled == nil then _G.Mod_LootBox_Enabled = false end  -- NEW
 
 -- ============================================================
 -- CHAMS COLOR CONFIG
@@ -36,7 +37,7 @@ if _G.Mod_Chams_GreenRGB == nil then _G.Mod_Chams_GreenRGB = {R=0, G=255, B=0, A
 if _G.Mod_Chams_YellowRGB == nil then _G.Mod_Chams_YellowRGB = {R=255, G=255, B=0, A=255} end
 
 -- ============================================================
--- MEMORY FEATURES CONFIG (ADDED FROM SOURCE)
+-- MEMORY FEATURES CONFIG
 -- ============================================================
 if _G.MemoryConfig == nil then
     _G.MemoryConfig = {
@@ -52,7 +53,6 @@ if _G.MemoryConfig == nil then
     }
 end
 
--- Speed Boost State
 _G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
 
 -- ============================================================
@@ -69,6 +69,7 @@ _G.ESPConfig = _G.ESPConfig or {
     BlackSky = false,
     RainEnabled = false,
     SnowEnabled = false,
+    EnableLootBox = false,  -- NEW
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -168,10 +169,9 @@ function SetSnowEnabled(enabled)
 end
 
 -- ============================================================
--- MEMORY FEATURES FUNCTIONS (ADDED FROM SOURCE)
+-- MEMORY FEATURES FUNCTIONS
 -- ============================================================
 
--- Helper: Normalize / Denormalize for sliders
 local function Norm(val, min, max) return (val - min) / (max - min) end
 local function DeNorm(norm, min, max) return min + (norm * (max - min)) end
 
@@ -332,6 +332,77 @@ function ApplyMemoryInfiniteAmmo(enabled)
         shoot.bClipHasInfiniteBullets = enabled
         shoot.bHasInfiniteBullets = enabled
     end
+end
+
+-- ============================================================
+-- LOOT BOX ESP (NEW)
+-- ============================================================
+local lootBoxCache = {}
+local lootBoxCacheTime = 0
+
+function ESPLootBox()
+    if not _G.ESPConfig.EnableLootBox then return end
+    
+    pcall(function()
+        local char = GameplayData.GetPlayerCharacter()
+        if not slua.isValid(char) then return end
+        
+        local controller = slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(controller) then return end
+        
+        local hud = controller:GetHUD()
+        if not slua.isValid(hud) then return end
+        
+        local myPos = char:K2_GetActorLocation()
+        if not myPos then return end
+        
+        local currentTime = os.clock()
+        if currentTime - lootBoxCacheTime > 3.0 then
+            lootBoxCache = {}
+            lootBoxCacheTime = currentTime
+        end
+        
+        local PlayerTombBox = import("PlayerTombBox")
+        if not PlayerTombBox then return end
+        
+        local world = slua_GameFrontendHUD:GetWorld()
+        if not slua.isValid(world) then return end
+        
+        local GameplayStatics = import("GameplayStatics")
+        if not GameplayStatics then return end
+        
+        local allBoxes = GameplayStatics.GetAllActorsOfClass(world, PlayerTombBox, nil)
+        if not allBoxes then return end
+        
+        local count = allBoxes:Num()
+        for i = 0, count - 1 do
+            local box = allBoxes:Get(i)
+            if slua.isValid(box) then
+                local bPos = box:K2_GetActorLocation()
+                if bPos then
+                    local dx = bPos.X - myPos.X
+                    local dy = bPos.Y - myPos.Y
+                    local dz = bPos.Z - myPos.Z
+                    local dist = math.sqrt(dx*dx + dy*dy + dz*dz) / 100
+                    local distM = math.floor(dist)
+                    
+                    if distM <= 500 then
+                        hud:AddDebugText(
+                            "LOOT[" .. distM .. "m]",
+                            box,
+                            1.0,
+                            {X = 0, Y = 0, Z = 200},
+                            {X = 0, Y = 0, Z = 200},
+                            {R = 255, G = 0, B = 0, A = 255},
+                            true, false, true, nil,
+                            1.5,
+                            true
+                        )
+                    end
+                end
+            end
+        end
+    end)
 end
 
 -- ============================================================
@@ -592,7 +663,6 @@ local function ESPTick()
                         local hpText = isKnock and "DOWN" or HPBar(hpPercent)
                         HUD:AddDebugText(hpText, tPawn, TextScale(distM), {X=0,Y=0,Z=hpOffset}, {X=0,Y=0,Z=hpOffset}, hpColor, true, false, true, nil, 1.0, true)
 
-                        -- ===== GREEN/VISIBLE + YELLOW/HIDDEN COLOR LOGIC =====
                         local nameColor = {R=0,G=255,B=0,A=255}
                         local targetPos = headPos or tPawn:K2_GetActorLocation()
                         pcall(function()
@@ -622,6 +692,9 @@ local function ESPTick()
         HUD:AddDebugText(string.format("BOT : %d     PLAYER : %d", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=150}, {X=0,Y=0,Z=150}, {R=255,G=255,B=0,A=255}, true, false, true, nil, 1.0, true)
         HUD:AddDebugText("✦REAL DEV @TrnDravix✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
     end
+    
+    -- Call LootBox ESP
+    ESPLootBox()
 end
 
 pcall(function()
@@ -1294,6 +1367,18 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            -- LOOT BOX ESP TOGGLE (NEW)
+            {
+                Key = "LootBoxESP",
+                UI = AliasMap.TitleSwitcher,
+                Text = "LOOT BOX ESP",
+                GetFunc = function() return _G.ESPConfig.EnableLootBox or false end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.EnableLootBox = value
+                    print("[MOD] LOOT BOX ESP: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
             { UI = AliasMap.Title, Text = "--- SCENE EFFECTS ---" },
             {
                 Key = "ESP_BlackSky",
@@ -1523,7 +1608,7 @@ _G.InitModMenuTab = function()
             }
         }
 
-        -- ===== CATEGORY 3: MEMORY FEATURES (ADDED FROM SOURCE) =====
+        -- ===== CATEGORY 3: MEMORY FEATURES =====
         local MemoryStack = {
             { UI = AliasMap.Title, Text = "MEMORY FEATURES (USE AT OWN RISK)" },
 
