@@ -36,7 +36,27 @@ if _G.Mod_Chams_GreenRGB == nil then _G.Mod_Chams_GreenRGB = {R=0, G=255, B=0, A
 if _G.Mod_Chams_YellowRGB == nil then _G.Mod_Chams_YellowRGB = {R=255, G=255, B=0, A=255} end
 
 -- ============================================================
--- WALLHACK COLOR + GLOW CONFIG (WITH CUSTOM COLORS)
+-- MEMORY FEATURES CONFIG (ADDED FROM SOURCE)
+-- ============================================================
+if _G.MemoryConfig == nil then
+    _G.MemoryConfig = {
+        SpeedBoost = false,
+        SpeedPercent = 250,
+        AntiGravity = false,
+        GravityScale = 1.0,
+        WallClimb = false,
+        SuperBullet = 1,
+        SuperFireRate = false,
+        SuperFireRateVal = 0.008,
+        InfiniteAmmo = false,
+    }
+end
+
+-- Speed Boost State
+_G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
+
+-- ============================================================
+-- WALLHACK COLOR + GLOW CONFIG
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
@@ -49,10 +69,6 @@ _G.ESPConfig = _G.ESPConfig or {
     BlackSky = false,
     RainEnabled = false,
     SnowEnabled = false,
-    UseCustomVisible = false,
-    UseCustomInvisible = false,
-    CustomVisibleColor = {R=0, G=255, B=0, A=255},
-    CustomInvisibleColor = {R=255, G=255, B=0, A=255},
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -67,22 +83,6 @@ local function GetColorFromIndex(idx)
         {R=255,G=0,B=255,A=255},   -- 7 Purple
     }
     return colors[idx] or colors[4]
-end
-
-local function GetWallhackColor(isVisible)
-    if isVisible then
-        if _G.ESPConfig.UseCustomVisible then
-            return _G.ESPConfig.CustomVisibleColor
-        else
-            return GetColorFromIndex(_G.ESPConfig.WallhackVisibleColor)
-        end
-    else
-        if _G.ESPConfig.UseCustomInvisible then
-            return _G.ESPConfig.CustomInvisibleColor
-        else
-            return GetColorFromIndex(_G.ESPConfig.WallhackInvisibleColor)
-        end
-    end
 end
 
 -- ============================================================
@@ -165,6 +165,173 @@ function SetSnowEnabled(enabled)
             end
         end
     end)
+end
+
+-- ============================================================
+-- MEMORY FEATURES FUNCTIONS (ADDED FROM SOURCE)
+-- ============================================================
+
+-- Helper: Normalize / Denormalize for sliders
+local function Norm(val, min, max) return (val - min) / (max - min) end
+local function DeNorm(norm, min, max) return min + (norm * (max - min)) end
+
+-- ===== SPEED BOOST =====
+local function RemoveSpeedModify(char)
+    if not slua.isValid(char) or not char.AttrModifyComp then return end
+    if _G.SpeedBoostState.modifyId then
+        pcall(function() char.AttrModifyComp:RemoveModifyItemFromCache(_G.SpeedBoostState.modifyId) end)
+        _G.SpeedBoostState.modifyId = nil
+    end
+end
+
+local function ApplySpeedModify(char)
+    if not slua.isValid(char) or not char.AttrModifyComp then return end
+    RemoveSpeedModify(char)
+    local rate = (_G.MemoryConfig.SpeedPercent / 100.0) - 1.0
+    pcall(function()
+        _G.SpeedBoostState.modifyId = char.AttrModifyComp:AddModifyItemAndCache("SpeedRate", 0, rate, true, char, false)
+    end)
+end
+
+local function UpdateSpeedBoost()
+    if not _G.MemoryConfig.SpeedBoost then return end
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    if _G.SpeedBoostState.currentChar ~= char then
+        if _G.SpeedBoostState.currentChar then RemoveSpeedModify(_G.SpeedBoostState.currentChar) end
+        _G.SpeedBoostState.currentChar = char
+    end
+    ApplySpeedModify(char)
+end
+
+function SetMemorySpeedBoost(enabled)
+    _G.MemoryConfig.SpeedBoost = enabled
+    if enabled then
+        if _G.SpeedBoostState.timer then return end
+        _G.SpeedBoostState.active = true
+        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if slua.isValid(pc) and pc.AddGameTimer then
+            _G.SpeedBoostState.timer = pc:AddGameTimer(0.3, true, UpdateSpeedBoost)
+        end
+    else
+        _G.SpeedBoostState.active = false
+        if _G.SpeedBoostState.timer then
+            local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+            if slua.isValid(pc) and pc.RemoveGameTimer then pc:RemoveGameTimer(_G.SpeedBoostState.timer) end
+            _G.SpeedBoostState.timer = nil
+        end
+        if _G.SpeedBoostState.currentChar then
+            RemoveSpeedModify(_G.SpeedBoostState.currentChar)
+            _G.SpeedBoostState.currentChar = nil
+        end
+    end
+end
+
+function SetMemorySpeedPercent(val)
+    _G.MemoryConfig.SpeedPercent = val
+    if _G.MemoryConfig.SpeedBoost and _G.SpeedBoostState.currentChar then
+        ApplySpeedModify(_G.SpeedBoostState.currentChar)
+    end
+end
+
+-- ===== ANTI-GRAVITY =====
+function SetMemoryAntiGravity(enabled)
+    _G.MemoryConfig.AntiGravity = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if slua.isValid(char) then
+        local move = char.CharacterMovement or char.CharMoveComp
+        if move then
+            move.GravityScale = enabled and _G.MemoryConfig.GravityScale or 1.0
+        end
+    end
+end
+
+function SetMemoryGravityScale(val)
+    _G.MemoryConfig.GravityScale = val
+    if _G.MemoryConfig.AntiGravity then SetMemoryAntiGravity(true) end
+end
+
+-- ===== WALL CLIMB =====
+function SetMemoryWallClimb(enabled)
+    _G.MemoryConfig.WallClimb = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if slua.isValid(char) then
+        local move = char.CharacterMovement or char.CharMoveComp
+        if move then
+            if enabled then
+                move.WalkableFloorAngle = 199.0
+                move.MaxStepHeight = 999.0
+            else
+                move.WalkableFloorAngle = 45.0
+                move.MaxStepHeight = 45.0
+            end
+        end
+    end
+end
+
+-- ===== SUPER BULLET =====
+function ApplyMemorySuperBullet(count)
+    _G.MemoryConfig.SuperBullet = count or 1
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    local wm = char.WeaponManagerComponent
+    if not slua.isValid(wm) then return end
+    local wep = wm.CurrentWeaponReplicated
+    if not slua.isValid(wep) then return end
+    local shoot = wep.ShootWeaponEntityComp
+    if slua.isValid(shoot) then
+        shoot.BulletNumSingleShot = count
+    end
+end
+
+-- ===== SUPER FIRE RATE =====
+function ApplyMemorySuperFireRate(enabled)
+    _G.MemoryConfig.SuperFireRate = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    local wm = char.WeaponManagerComponent
+    if not slua.isValid(wm) then return end
+    local wep = wm.CurrentWeaponReplicated
+    if not slua.isValid(wep) then return end
+    local shoot = wep.ShootWeaponEntityComp
+    if slua.isValid(shoot) then
+        shoot.ShootInterval = enabled and _G.MemoryConfig.SuperFireRateVal or 0.1
+    end
+end
+
+function SetMemorySuperFireRateVal(val)
+    _G.MemoryConfig.SuperFireRateVal = val
+    if _G.MemoryConfig.SuperFireRate then
+        ApplyMemorySuperFireRate(true)
+    end
+end
+
+-- ===== INFINITE AMMO =====
+function ApplyMemoryInfiniteAmmo(enabled)
+    _G.MemoryConfig.InfiniteAmmo = enabled
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if not slua.isValid(pc) then return end
+    local char = pc:GetPlayerCharacterSafety()
+    if not slua.isValid(char) then return end
+    local wm = char.WeaponManagerComponent
+    if not slua.isValid(wm) then return end
+    local wep = wm.CurrentWeaponReplicated
+    if not slua.isValid(wep) then return end
+    local shoot = wep.ShootWeaponEntityComp
+    if slua.isValid(shoot) then
+        shoot.bClipHasInfiniteBullets = enabled
+        shoot.bHasInfiniteBullets = enabled
+    end
 end
 
 -- ============================================================
@@ -733,7 +900,7 @@ end)
 --  dead box skins, etc. – all kept as is.)
 
 -- ============================================================
--- ==================== PBC WALLHACK MODULE (FIXED) ===========
+-- ==================== PBC WALLHACK MODULE ====================
 -- ============================================================
 
 _G._ChamsTimer = nil
@@ -764,29 +931,11 @@ end
 
 local function ChamsApplyToMesh(mesh, visColor, occColor)
     if not mesh or not slua.isValid(mesh) then return end
-    
-    local LinearColor = import("LinearColor")
-    if not LinearColor then return end
-    
-    -- Convert to LinearColor
-    local visColorNorm = LinearColor(
-        visColor.R / 255,
-        visColor.G / 255,
-        visColor.B / 255,
-        1.0
-    )
-    local occColorNorm = LinearColor(
-        occColor.R / 255,
-        occColor.G / 255,
-        occColor.B / 255,
-        1.0
-    )
-    
     pcall(function()
         mesh:SetDrawDyeing(true)
         mesh:SetDrawDyeingMode(1)
-        mesh:SetVisibleDyeingColor(visColorNorm)
-        mesh:SetOccludedDyeingColor(occColorNorm)
+        mesh:SetVisibleDyeingColor(visColor)
+        mesh:SetOccludedDyeingColor(occColor)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
         
@@ -798,26 +947,31 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
                 mesh:SetScalarParameterValueOnMaterials("Brightness", glowIntensity * 0.5)
                 mesh:SetScalarParameterValueOnMaterials("BloomIntensity", glowIntensity * 0.8)
                 mesh:SetScalarParameterValueOnMaterials("GlowIntensity", glowIntensity)
+                
+                local brightVis = LinearColor(
+                    math.min(visColor.R * (1 + glowIntensity * 0.15), 255),
+                    math.min(visColor.G * (1 + glowIntensity * 0.15), 255),
+                    math.min(visColor.B * (1 + glowIntensity * 0.15), 255),
+                    255
+                )
+                mesh:SetVisibleDyeingColor(brightVis)
             end)
         end
     end)
-    
     pcall(function()
         mesh:SetDrawHighlight(true)
-        mesh:OverrideHighlightColor(visColorNorm)
+        mesh:OverrideHighlightColor(visColor)
         mesh:SetHighlightCanBeOccluded(false)
     end)
-    
     pcall(function()
         mesh:SetDrawIdeaOutline(true)
         mesh:SetIdeaOutlineNew(true)
         mesh:SetIdeaOutlineOcclusionHighlight(true)
-        mesh:OverrideIdeaOutlineColor(visColorNorm)
-        mesh:SetIdeaOutlineOcclusionColor(occColorNorm)
+        mesh:OverrideIdeaOutlineColor(visColor)
+        mesh:SetIdeaOutlineOcclusionColor(occColor)
         mesh:OverrideIdeaOutlineThickness(10.0)
         mesh:SetIdeaOverrideOutlineAndOcclusion(true)
     end)
-    
     pcall(function()
         mesh:SetRenderCustomDepth(true)
         mesh:SetCustomDepthStencilValue(255)
@@ -845,37 +999,46 @@ local function ChamsTick()
 
         ChamsSetupConsole()
 
+        local LinearColor = import("LinearColor")
+        if not LinearColor then return end
+
         local cfg = _G.ESPConfig
-        
-        -- Get Visible Color
-        local visColor
-        if cfg.UseCustomVisible then
-            visColor = cfg.CustomVisibleColor
-        else
-            visColor = GetColorFromIndex(cfg.WallhackVisibleColor)
-        end
-        
-        -- Get Invisible Color
-        local occColor
-        if cfg.UseCustomInvisible then
-            occColor = cfg.CustomInvisibleColor
-        else
-            occColor = GetColorFromIndex(cfg.WallhackInvisibleColor)
-        end
-        
-        -- Apply brightness
         local bright = cfg.WallhackBrightness / 25.0
-        visColor = {
-            R = math.min(visColor.R * bright, 255),
-            G = math.min(visColor.G * bright, 255),
-            B = math.min(visColor.B * bright, 255),
-            A = 255
-        }
-        occColor = {
-            R = math.min(occColor.R * bright, 255),
-            G = math.min(occColor.G * bright, 255),
-            B = math.min(occColor.B * bright, 255),
-            A = 255
+
+        local visColorTable = GetColorFromIndex(cfg.WallhackVisibleColor)
+        local occColorTable = GetColorFromIndex(cfg.WallhackInvisibleColor)
+
+        local visColor = LinearColor(
+            visColorTable.R / 255 * bright,
+            visColorTable.G / 255 * bright,
+            visColorTable.B / 255 * bright,
+            100
+        )
+        local occColor = LinearColor(
+            occColorTable.R / 255 * bright,
+            occColorTable.G / 255 * bright,
+            occColorTable.B / 255 * bright,
+            100
+        )
+
+        local bVisColor = LinearColor(
+            visColorTable.R / 255 * bright * 0.7,
+            visColorTable.G / 255 * bright * 0.7,
+            visColorTable.B / 255 * bright * 0.7,
+            100
+        )
+        local bOccColor = LinearColor(
+            occColorTable.R / 255 * bright * 0.7,
+            occColorTable.G / 255 * bright * 0.7,
+            occColorTable.B / 255 * bright * 0.7,
+            100
+        )
+
+        local colors = {
+            vis = visColor,
+            occ = occColor,
+            bVis = bVisColor,
+            bOcc = bOccColor
         }
 
         _G._ChamsTickCount = _G._ChamsTickCount + 1
@@ -901,6 +1064,9 @@ local function ChamsTick()
             local isAI = false
             pcall(function() isAI = Game:IsAI(pawn) end)
             if isAI and not cfg.ShowAI then goto continue end
+
+            local visColor = isAI and colors.bVis or colors.vis
+            local occColor = isAI and colors.bOcc or colors.occ
 
             pcall(function()
                 if slua.isValid(pawn.Mesh) then
@@ -995,7 +1161,7 @@ _G.ChamsCleanup = function()
 end
 
 -- ============================================================
--- MENU (2 Categories: ALL FEATURES + CUSTOM - PREFERENCES)
+-- MENU (3 Categories: ALL FEATURES + CUSTOM - PREFERENCES + MEMORY FEATURES)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -1110,6 +1276,21 @@ _G.InitModMenuTab = function()
                     _G.Mod_iPadView_Enabled = value
                     if value then _G.EnableiPadViewUI() end
                     print("[MOD] IPAD VIEW: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "ModMenu_iPadViewDistance",
+                UI = AliasMap.Slider,
+                Text = "iPad View Distance",
+                Min = 80,
+                Max = 140,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return _G.Mod_iPadViewDistance or 90 end,
+                SetFunc = function(_, value)
+                    _G.Mod_iPadViewDistance = math.floor(value)
+                    print("[MOD] View Distance: " .. _G.Mod_iPadViewDistance)
                     return true
                 end
             },
@@ -1277,59 +1458,6 @@ _G.InitModMenuTab = function()
                 end
             },
             {
-                Key = "WH_UseCustomVisible",
-                UI = AliasMap.TitleSwitcher,
-                Text = "Use Custom Visible Color",
-                GetFunc = function() return _G.ESPConfig.UseCustomVisible or false end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.UseCustomVisible = value
-                    print("[MOD] Custom Visible: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            },
-            {
-                Key = "WH_CustomVisibleR",
-                UI = AliasMap.Slider,
-                Text = "Custom Visible - Red (0-255)",
-                Min = 0,
-                Max = 255,
-                Step = 1,
-                IsPercent = false,
-                GetFunc = function() return (_G.ESPConfig.CustomVisibleColor.R or 0) / 255 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.CustomVisibleColor.R = math.floor(value * 255)
-                    return true
-                end
-            },
-            {
-                Key = "WH_CustomVisibleG",
-                UI = AliasMap.Slider,
-                Text = "Custom Visible - Green (0-255)",
-                Min = 0,
-                Max = 255,
-                Step = 1,
-                IsPercent = false,
-                GetFunc = function() return (_G.ESPConfig.CustomVisibleColor.G or 255) / 255 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.CustomVisibleColor.G = math.floor(value * 255)
-                    return true
-                end
-            },
-            {
-                Key = "WH_CustomVisibleB",
-                UI = AliasMap.Slider,
-                Text = "Custom Visible - Blue (0-255)",
-                Min = 0,
-                Max = 255,
-                Step = 1,
-                IsPercent = false,
-                GetFunc = function() return (_G.ESPConfig.CustomVisibleColor.B or 0) / 255 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.CustomVisibleColor.B = math.floor(value * 255)
-                    return true
-                end
-            },
-            {
                 Key = "WH_InvisibleColor",
                 UI = AliasMap.Switcher,
                 Text = "Invisible Color",
@@ -1338,59 +1466,6 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.ESPConfig.WallhackInvisibleColor or 3 end,
                 SetFunc = function(_, value)
                     _G.ESPConfig.WallhackInvisibleColor = value
-                    return true
-                end
-            },
-            {
-                Key = "WH_UseCustomInvisible",
-                UI = AliasMap.TitleSwitcher,
-                Text = "Use Custom Invisible Color",
-                GetFunc = function() return _G.ESPConfig.UseCustomInvisible or false end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.UseCustomInvisible = value
-                    print("[MOD] Custom Invisible: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            },
-            {
-                Key = "WH_CustomInvisibleR",
-                UI = AliasMap.Slider,
-                Text = "Custom Invisible - Red (0-255)",
-                Min = 0,
-                Max = 255,
-                Step = 1,
-                IsPercent = false,
-                GetFunc = function() return (_G.ESPConfig.CustomInvisibleColor.R or 255) / 255 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.CustomInvisibleColor.R = math.floor(value * 255)
-                    return true
-                end
-            },
-            {
-                Key = "WH_CustomInvisibleG",
-                UI = AliasMap.Slider,
-                Text = "Custom Invisible - Green (0-255)",
-                Min = 0,
-                Max = 255,
-                Step = 1,
-                IsPercent = false,
-                GetFunc = function() return (_G.ESPConfig.CustomInvisibleColor.G or 255) / 255 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.CustomInvisibleColor.G = math.floor(value * 255)
-                    return true
-                end
-            },
-            {
-                Key = "WH_CustomInvisibleB",
-                UI = AliasMap.Slider,
-                Text = "Custom Invisible - Blue (0-255)",
-                Min = 0,
-                Max = 255,
-                Step = 1,
-                IsPercent = false,
-                GetFunc = function() return (_G.ESPConfig.CustomInvisibleColor.B or 0) / 255 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.CustomInvisibleColor.B = math.floor(value * 255)
                     return true
                 end
             },
@@ -1448,6 +1523,131 @@ _G.InitModMenuTab = function()
             }
         }
 
+        -- ===== CATEGORY 3: MEMORY FEATURES (ADDED FROM SOURCE) =====
+        local MemoryStack = {
+            { UI = AliasMap.Title, Text = "MEMORY FEATURES (USE AT OWN RISK)" },
+
+            -- Speed Boost
+            {
+                Key = "Mem_SpeedBoost",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Speed Boost",
+                GetFunc = function() return _G.MemoryConfig.SpeedBoost end,
+                SetFunc = function(_, val)
+                    SetMemorySpeedBoost(val)
+                    return true
+                end
+            },
+            {
+                Key = "Mem_SpeedPercent",
+                UI = AliasMap.Slider,
+                Text = "Speed % (100-500)",
+                Min = 100,
+                Max = 500,
+                Step = 5,
+                IsPercent = false,
+                GetFunc = function() return _G.MemoryConfig.SpeedPercent or 250 end,
+                SetFunc = function(_, val)
+                    SetMemorySpeedPercent(math.floor(val))
+                    return true
+                end
+            },
+
+            -- Anti-Gravity
+            {
+                Key = "Mem_AntiGravity",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Anti-Gravity",
+                GetFunc = function() return _G.MemoryConfig.AntiGravity end,
+                SetFunc = function(_, val)
+                    SetMemoryAntiGravity(val)
+                    return true
+                end
+            },
+            {
+                Key = "Mem_GravityScale",
+                UI = AliasMap.Slider,
+                Text = "Gravity Scale (-0.45 to 1.0)",
+                Min = -45,
+                Max = 100,
+                Step = 5,
+                IsPercent = false,
+                GetFunc = function() return (_G.MemoryConfig.GravityScale or 1.0) * 100 end,
+                SetFunc = function(_, val)
+                    SetMemoryGravityScale(val / 100)
+                    return true
+                end
+            },
+
+            -- Wall Climb
+            {
+                Key = "Mem_WallClimb",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Wall Climb",
+                GetFunc = function() return _G.MemoryConfig.WallClimb end,
+                SetFunc = function(_, val)
+                    SetMemoryWallClimb(val)
+                    return true
+                end
+            },
+
+            { UI = AliasMap.Title, Text = "--- WEAPON TWEAKS ---" },
+
+            -- Super Bullet
+            {
+                Key = "Mem_SuperBullet",
+                UI = AliasMap.Slider,
+                Text = "Super Bullet (1-20)",
+                Min = 1,
+                Max = 20,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return _G.MemoryConfig.SuperBullet or 1 end,
+                SetFunc = function(_, val)
+                    ApplyMemorySuperBullet(math.floor(val))
+                    return true
+                end
+            },
+
+            -- Super Fire Rate
+            {
+                Key = "Mem_SuperFireRate",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Super Fire Rate",
+                GetFunc = function() return _G.MemoryConfig.SuperFireRate end,
+                SetFunc = function(_, val)
+                    ApplyMemorySuperFireRate(val)
+                    return true
+                end
+            },
+            {
+                Key = "Mem_SuperFireRateVal",
+                UI = AliasMap.Slider,
+                Text = "Fire Interval (0.001 - 0.05s)",
+                Min = 1,
+                Max = 50,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return _G.MemoryConfig.SuperFireRateVal * 1000 end,
+                SetFunc = function(_, val)
+                    SetMemorySuperFireRateVal(val / 1000)
+                    return true
+                end
+            },
+
+            -- Infinite Ammo
+            {
+                Key = "Mem_InfiniteAmmo",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Infinite Ammo",
+                GetFunc = function() return _G.MemoryConfig.InfiniteAmmo end,
+                SetFunc = function(_, val)
+                    ApplyMemoryInfiniteAmmo(val)
+                    return true
+                end
+            }
+        }
+
         -- ===== REGISTER MENU =====
         SettingPageDefine.ModMenu = {
             Key = "ModMenu",
@@ -1463,6 +1663,11 @@ _G.InitModMenuTab = function()
                     Key = "ModMenu_CustomPref",
                     loc = "CUSTOM - PREFERENCES",
                     Stack = CustomPrefStack
+                },
+                {
+                    Key = "ModMenu_Memory",
+                    loc = "MEMORY FEATURES",
+                    Stack = MemoryStack
                 }
             }
         }
