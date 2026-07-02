@@ -28,7 +28,7 @@ if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
 
 -- ============================================================
--- CHAMS COLOR CONFIG (ADDED FROM SOURCE)
+-- CHAMS COLOR CONFIG
 -- ============================================================
 if _G.Mod_Chams_GreenEnabled == nil then _G.Mod_Chams_GreenEnabled = false end
 if _G.Mod_Chams_YellowEnabled == nil then _G.Mod_Chams_YellowEnabled = false end
@@ -44,9 +44,8 @@ _G.ESPConfig = _G.ESPConfig or {
     WallhackInvisibleColor = 3,
     WallhackBrightness = 25,
     ShowAI = true,
-    GlowEnabled = true,          -- GLOW ON/OFF BUTTON
-    GlowIntensity = 5,           -- GLOW INTENSITY SLIDER (1-10)
-    -- SCENE CONFIGS (ADDED FROM SOURCE)
+    GlowEnabled = true,
+    GlowIntensity = 5,
     BlackSky = false,
     RainEnabled = false,
     SnowEnabled = false,
@@ -67,7 +66,7 @@ local function GetColorFromIndex(idx)
 end
 
 -- ============================================================
--- SCENE FUNCTIONS (IMPROVED FROM SOURCE)
+-- SCENE FUNCTIONS
 -- ============================================================
 local function ExecuteConsoleCommand(cmd, value)
     local instance = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
@@ -213,10 +212,9 @@ function InitializeAllBypass()
     _G.Bypassed = true
 end
 
--- CALL BYPASS NOW
 InitializeAllBypass()
--- ============================================================
 
+-- ============================================================
 local require = require
 local import  = import
 local isValid = slua.isValid
@@ -266,7 +264,7 @@ pcall(function()
 end)
 
 -- ============================================================
--- ESP (WITH GREEN/VISIBLE & YELLOW/HIDDEN COLORS)
+-- ESP (WITH GREEN/VISIBLE + YELLOW/HIDDEN COLORS)
 -- ============================================================
 local SecurityCommonUtils = require("GameLua.Mod.BaseMod.Common.Security.SecurityCommonUtils")
 local ASTExtraPlayerController = import("/Script/ShadowTrackerExtra.STExtraPlayerController")
@@ -407,7 +405,7 @@ local function ESPTick()
                         local hpText = isKnock and "DOWN" or HPBar(hpPercent)
                         HUD:AddDebugText(hpText, tPawn, TextScale(distM), {X=0,Y=0,Z=hpOffset}, {X=0,Y=0,Z=hpOffset}, hpColor, true, false, true, nil, 1.0, true)
 
-                        -- ===== GREEN/VISIBLE + YELLOW/HIDDEN COLOR LOGIC (FROM SOURCE) =====
+                        -- ===== GREEN/VISIBLE + YELLOW/HIDDEN COLOR LOGIC =====
                         local nameColor = {R=0,G=255,B=0,A=255}
                         local targetPos = headPos or tPawn:K2_GetActorLocation()
                         pcall(function()
@@ -733,7 +731,6 @@ local function ChamsSetupConsole()
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.CustomDepth 3")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
-        -- ===== GLOW/BLOOM FORCE =====
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.BloomQuality 5")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.EyeAdaptationQuality 2")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Quality 2")
@@ -755,7 +752,6 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
         
-        -- ===== GLOW/CHAMAK KE LIYE (Sirf tab hi apply hoga jab GlowEnabled ON ho) =====
         if _G.ESPConfig.GlowEnabled then
             local glowIntensity = _G.ESPConfig.GlowIntensity or 5
             pcall(function()
@@ -765,7 +761,6 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
                 mesh:SetScalarParameterValueOnMaterials("BloomIntensity", glowIntensity * 0.8)
                 mesh:SetScalarParameterValueOnMaterials("GlowIntensity", glowIntensity)
                 
-                -- Colors ko aur bright karo
                 local brightVis = LinearColor(
                     math.min(visColor.R * (1 + glowIntensity * 0.15), 255),
                     math.min(visColor.G * (1 + glowIntensity * 0.15), 255),
@@ -979,7 +974,7 @@ _G.ChamsCleanup = function()
 end
 
 -- ============================================================
--- MENU (with Glow + Scene + CHAMS COLOR CONTROLS)
+-- MENU (2 Categories: ALL FEATURES + CUSTOM - PREFERENCES)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -1004,8 +999,9 @@ _G.InitModMenuTab = function()
     if not SettingPageDefine.ModMenu then
         local AliasMap = require("client.slua.umg.NewSetting.Item.AliasMap")
 
-        local MainStack = {
-            { UI = AliasMap.Title, Text = "TrnDravix SETTINGS" },
+        -- ===== CATEGORY 1: ALL FEATURES (Sirf ON/OFF Toggles) =====
+        local AllFeaturesStack = {
+            { UI = AliasMap.Title, Text = "ALL FEATURES" },
 
             {
                 Key = "ModMenu_Aimbot",
@@ -1040,8 +1036,103 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            
-            -- ===== CHAMS COLOR CONTROLS (ADDED FROM SOURCE) =====
+            {
+                Key = "WH_Enabled",
+                UI = AliasMap.TitleSwitcher,
+                Text = "WALLHACK",
+                GetFunc = function() return _G.ESPConfig.Wallhack end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.Wallhack = value
+                    _G.Mod_PBCWallhack_Enabled = value
+                    print("[MOD] WALLHACK: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "FPS165",
+                UI = AliasMap.Switcher,
+                Text = "165 FPS",
+                GetFunc = function() return _G.Mod_FPS165_Enabled ~= false end,
+                SetFunc = function(_, value)
+                    _G.Mod_FPS165_Enabled = value
+                    if value then _G.Enable165FPSLogic() end
+                    print("[MOD] 165 FPS: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "NoGrass",
+                UI = AliasMap.Switcher,
+                Text = "NO GRASS",
+                GetFunc = function() return _G.Mod_NoGrass_Enabled ~= false end,
+                SetFunc = function(_, value)
+                    _G.Mod_NoGrass_Enabled = value
+                    if value then
+                        pcall(function()
+                            local gi = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
+                            if gi then
+                                gi:ExecuteCMD("grass.DensityScale", "0")
+                                gi:ExecuteCMD("grass.DiscardDataOnLoad", "1")
+                            end
+                        end)
+                    end
+                    print("[MOD] NO GRASS: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "iPadView",
+                UI = AliasMap.Switcher,
+                Text = "IPAD VIEW",
+                GetFunc = function() return _G.Mod_iPadView_Enabled ~= false end,
+                SetFunc = function(_, value)
+                    _G.Mod_iPadView_Enabled = value
+                    if value then _G.EnableiPadViewUI() end
+                    print("[MOD] IPAD VIEW: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            { UI = AliasMap.Title, Text = "--- SCENE EFFECTS ---" },
+            {
+                Key = "ESP_BlackSky",
+                UI = AliasMap.TitleSwitcher,
+                Text = "BlackSky",
+                GetFunc = function() return _G.ESPConfig.BlackSky end,
+                SetFunc = function(ctrl, value)
+                    _G.ESPConfig.BlackSky = value
+                    SetBlackSky(value)
+                    return true
+                end
+            },
+            {
+                Key = "ESP_RainEnabled",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Rain Effect",
+                GetFunc = function() return _G.ESPConfig.RainEnabled end,
+                SetFunc = function(ctrl, value)
+                    _G.ESPConfig.RainEnabled = value
+                    SetRainEnabled(value)
+                    return true
+                end
+            },
+            {
+                Key = "ESP_SnowEnabled",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Snow Effect",
+                GetFunc = function() return _G.ESPConfig.SnowEnabled end,
+                SetFunc = function(ctrl, value)
+                    _G.ESPConfig.SnowEnabled = value
+                    SetSnowEnabled(value)
+                    return true
+                end
+            }
+        }
+
+        -- ===== CATEGORY 2: CUSTOM - PREFERENCES (Colors, Sliders, Switchers) =====
+        local CustomPrefStack = {
+            { UI = AliasMap.Title, Text = "CUSTOM - PREFERENCES" },
+
+            -- CHAMS COLORS
             { UI = AliasMap.Title, Text = "--- CHAMS COLORS ---" },
             {
                 Key = "ModMenu_GreenColor",
@@ -1065,7 +1156,6 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return (_G.Mod_Chams_GreenRGB.R or 0) / 255 end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_GreenRGB.R = math.floor(value * 255)
-                    print("[MOD] Green-R: " .. _G.Mod_Chams_GreenRGB.R)
                     return true
                 end
             },
@@ -1080,7 +1170,6 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return (_G.Mod_Chams_GreenRGB.G or 255) / 255 end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_GreenRGB.G = math.floor(value * 255)
-                    print("[MOD] Green-G: " .. _G.Mod_Chams_GreenRGB.G)
                     return true
                 end
             },
@@ -1095,7 +1184,6 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return (_G.Mod_Chams_GreenRGB.B or 0) / 255 end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_GreenRGB.B = math.floor(value * 255)
-                    print("[MOD] Green-B: " .. _G.Mod_Chams_GreenRGB.B)
                     return true
                 end
             },
@@ -1121,7 +1209,6 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return (_G.Mod_Chams_YellowRGB.R or 255) / 255 end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_YellowRGB.R = math.floor(value * 255)
-                    print("[MOD] Yellow-R: " .. _G.Mod_Chams_YellowRGB.R)
                     return true
                 end
             },
@@ -1136,7 +1223,6 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return (_G.Mod_Chams_YellowRGB.G or 255) / 255 end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_YellowRGB.G = math.floor(value * 255)
-                    print("[MOD] Yellow-G: " .. _G.Mod_Chams_YellowRGB.G)
                     return true
                 end
             },
@@ -1151,26 +1237,12 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return (_G.Mod_Chams_YellowRGB.B or 0) / 255 end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_YellowRGB.B = math.floor(value * 255)
-                    print("[MOD] Yellow-B: " .. _G.Mod_Chams_YellowRGB.B)
                     return true
                 end
             },
-            -- ===== END CHAMS COLOR CONTROLS =====
-            
-            -- ===== WALLHACK SECTION =====
-            { UI = AliasMap.Title, Text = "--- WALLHACK ---" },
-            {
-                Key = "WH_Enabled",
-                UI = AliasMap.TitleSwitcher,
-                Text = "Wallhack",
-                GetFunc = function() return _G.ESPConfig.Wallhack end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.Wallhack = value
-                    _G.Mod_PBCWallhack_Enabled = value
-                    print("[MOD] WALLHACK: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            },
+
+            -- WALLHACK COLORS
+            { UI = AliasMap.Title, Text = "--- WALLHACK COLORS ---" },
             {
                 Key = "WH_VisibleColor",
                 UI = AliasMap.Switcher,
@@ -1219,8 +1291,9 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- ===== GLOW SECTION =====
-            { UI = AliasMap.Title, Text = "--- GLOW ---" },
+
+            -- GLOW SETTINGS
+            { UI = AliasMap.Title, Text = "--- GLOW SETTINGS ---" },
             {
                 Key = "WH_GlowEnabled",
                 UI = AliasMap.TitleSwitcher,
@@ -1245,102 +1318,24 @@ _G.InitModMenuTab = function()
                     _G.ESPConfig.GlowIntensity = value
                     return true
                 end
-            },
-            -- ===== END GLOW SECTION =====
-            -- ===== END WALLHACK SECTION =====
-            
-            -- ===== SCENE FEATURES SECTION =====
-            { UI = AliasMap.Title, Text = "--- SCENE EFFECTS ---" },
-            {
-                Key = "ESP_BlackSky",
-                UI = AliasMap.TitleSwitcher,
-                Text = "BlackSky (Dark Sky)",
-                GetFunc = function() return _G.ESPConfig.BlackSky end,
-                SetFunc = function(ctrl, value)
-                    _G.ESPConfig.BlackSky = value
-                    SetBlackSky(value)
-                    return true
-                end
-            },
-            {
-                Key = "ESP_RainEnabled",
-                UI = AliasMap.TitleSwitcher,
-                Text = "Rain Effect",
-                GetFunc = function() return _G.ESPConfig.RainEnabled end,
-                SetFunc = function(ctrl, value)
-                    _G.ESPConfig.RainEnabled = value
-                    SetRainEnabled(value)
-                    return true
-                end
-            },
-            {
-                Key = "ESP_SnowEnabled",
-                UI = AliasMap.TitleSwitcher,
-                Text = "Snow Effect",
-                GetFunc = function() return _G.ESPConfig.SnowEnabled end,
-                SetFunc = function(ctrl, value)
-                    _G.ESPConfig.SnowEnabled = value
-                    SetSnowEnabled(value)
-                    return true
-                end
-            },
-            -- ===== END SCENE FEATURES =====
-            
-            {
-                Key = "FPS165",
-                UI = AliasMap.Switcher,
-                Text = "165 FPS",
-                GetFunc = function() return _G.Mod_FPS165_Enabled ~= false end,
-                SetFunc = function(_, value)
-                    _G.Mod_FPS165_Enabled = value
-                    if value then _G.Enable165FPSLogic() end
-                    print("[MOD] 165 FPS: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            },
-            {
-                Key = "NoGrass",
-                UI = AliasMap.Switcher,
-                Text = "NO GRASS",
-                GetFunc = function() return _G.Mod_NoGrass_Enabled ~= false end,
-                SetFunc = function(_, value)
-                    _G.Mod_NoGrass_Enabled = value
-                    if value then
-                        pcall(function()
-                            local gi = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
-                            if gi then
-                                gi:ExecuteCMD("grass.DensityScale", "0")
-                                gi:ExecuteCMD("grass.DiscardDataOnLoad", "1")
-                            end
-                        end)
-                    end
-                    print("[MOD] NO GRASS: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            },
-            {
-                Key = "iPadView",
-                UI = AliasMap.Switcher,
-                Text = "IPAD VIEW",
-                GetFunc = function() return _G.Mod_iPadView_Enabled ~= false end,
-                SetFunc = function(_, value)
-                    _G.Mod_iPadView_Enabled = value
-                    if value then _G.EnableiPadViewUI() end
-                    print("[MOD] IPAD VIEW: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
             }
         }
 
+        -- ===== REGISTER MENU =====
         SettingPageDefine.ModMenu = {
             Key = "ModMenu",
             loc = "TrnDravix MENU",
             UIKey = "Setting_Page_Privacy",
             Category = {
                 {
-                    Key = "ModMenu_Main",
+                    Key = "ModMenu_AllFeatures",
                     loc = "ALL FEATURES",
-                    Stack = MainStack
+                    Stack = AllFeaturesStack
+                },
+                {
+                    Key = "ModMenu_CustomPref",
+                    loc = "CUSTOM - PREFERENCES",
+                    Stack = CustomPrefStack
                 }
             }
         }
