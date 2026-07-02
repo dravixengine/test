@@ -498,7 +498,7 @@ end
 if _G.Mod_FPS165_Enabled ~= false then _G.Enable165FPSLogic() end
 if _G.Mod_iPadView_Enabled ~= false then _G.EnableiPadViewUI() end
 
--- iPad View + No Grass + Vehicle ESP (realtime)
+-- iPad View + No Grass + Vehicle ESP (ALL IN ONE TIMER)
 local pc = slua_GameFrontendHUD:GetPlayerController()
 if slua.isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
   _G._FeaturesTimerPC = pc
@@ -561,12 +561,13 @@ if slua.isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
           _G._NoGrassApplied = true
         end
       end
-    end)
-  end)
 
-  -- Vehicle ESP Timer
-  pc:AddGameTimer(1.0, true, function()
-    VehicleESPLoop()
+      -- ===== VEHICLE ESP (ADDED HERE) =====
+      if _G.MOD_VehicleESP then
+          pcall(VehicleESPLoop)
+      end
+      -- ===== END VEHICLE ESP =====
+    end)
   end)
 end
 
