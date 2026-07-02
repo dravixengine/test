@@ -1,7 +1,7 @@
 -- ============================================================
 -- MODDED BY TrnDravix + @TrnDravix
--- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
--- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS
+-- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + VEHICLE ESP
+-- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS, Vehicle ESP
 -- Bypass activates on game start with popup
 -- ============================================================
 
@@ -26,9 +26,10 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
+if _G.MOD_VehicleESP == nil then _G.MOD_VehicleESP = false end
 
 -- ============================================================
--- WALLHACK COLOR + GLOW CONFIG
+-- WALLHACK COLOR CONFIG
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
@@ -36,8 +37,6 @@ _G.ESPConfig = _G.ESPConfig or {
     WallhackInvisibleColor = 3,
     WallhackBrightness = 25,
     ShowAI = true,
-    GlowEnabled = true,          -- GLOW ON/OFF BUTTON
-    GlowIntensity = 5,           -- GLOW INTENSITY SLIDER (1-10)
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -369,6 +368,46 @@ pcall(function()
 end)
 
 -- ============================================================
+-- VEHICLE ESP
+-- ============================================================
+local function VehicleESPLoop()
+    pcall(function()
+        if not _G.MOD_VehicleESP then return end
+        local pc = slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(pc) then return end
+        local localPlayer = pc:GetPlayerCharacterSafety()
+        if not slua.isValid(localPlayer) then return end
+        local myPos = localPlayer:K2_GetActorLocation()
+        if not myPos then return end
+        local HUD = pc:GetHUD()
+        if not slua.isValid(HUD) then return end
+        
+        if not _G._VehicleCacheTime or os.clock() - _G._VehicleCacheTime > 1.0 then
+            _G._VehicleCacheTime = os.clock()
+            _G._VehicleCache = Game:GetAllVehicles() or {}
+        end
+        
+        for _, vehicle in pairs(_G._VehicleCache) do
+            if slua.isValid(vehicle) then
+                local vPos = vehicle:K2_GetActorLocation()
+                local dx = vPos.X - myPos.X
+                local dy = vPos.Y - myPos.Y
+                local dz = vPos.Z - myPos.Z
+                local distSq = dx * dx + dy * dy + dz * dz
+                
+                if distSq < 900000000 then
+                    local dist = math.sqrt(distSq)
+                    local vehicleName = vehicle:GetName() or "Vehicle"
+                    HUD:AddDebugText(string.format("[%dm] %s", math.floor(dist/100), vehicleName), vehicle, 1.0, 
+                        {X=0, Y=0, Z=150}, {X=0, Y=0, Z=150}, 
+                        {R=255, G=255, B=0, A=255}, true, false, true, nil, 1.0, true)
+                end
+            end
+        end
+    end)
+end
+
+-- ============================================================
 -- AIMBOT + FEATURES
 -- ============================================================
 _G.Enable165FPSLogic = function()
@@ -459,7 +498,7 @@ end
 if _G.Mod_FPS165_Enabled ~= false then _G.Enable165FPSLogic() end
 if _G.Mod_iPadView_Enabled ~= false then _G.EnableiPadViewUI() end
 
--- iPad View + No Grass (realtime)
+-- iPad View + No Grass + Vehicle ESP (realtime)
 local pc = slua_GameFrontendHUD:GetPlayerController()
 if slua.isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
   _G._FeaturesTimerPC = pc
@@ -523,6 +562,11 @@ if slua.isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
         end
       end
     end)
+  end)
+
+  -- Vehicle ESP Timer
+  pc:AddGameTimer(1.0, true, function()
+    VehicleESPLoop()
   end)
 end
 
@@ -630,15 +674,8 @@ local function ChamsSetupConsole()
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.CustomDepth 3")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
-        -- ===== GLOW/BLOOM FORCE =====
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.BloomQuality 5")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.EyeAdaptationQuality 2")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Quality 2")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.LightShaftQuality 2")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Saturation 1.5")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Contrast 1.3")
         _G._ChamsConsoleReady = true
-        print("[PBC] Console ready + BLOOM FORCED")
+        print("[PBC] Console ready")
     end)
 end
 
@@ -651,27 +688,6 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
         mesh:SetOccludedDyeingColor(occColor)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
-        
-        -- ===== GLOW/CHAMAK KE LIYE (Sirf tab hi apply hoga jab GlowEnabled ON ho) =====
-        if _G.ESPConfig.GlowEnabled then
-            local glowIntensity = _G.ESPConfig.GlowIntensity or 5
-            pcall(function()
-                mesh:SetScalarParameterValueOnMaterials("EmissiveIntensity", glowIntensity)
-                mesh:SetScalarParameterValueOnMaterials("EmissiveScale", glowIntensity * 0.6)
-                mesh:SetScalarParameterValueOnMaterials("Brightness", glowIntensity * 0.5)
-                mesh:SetScalarParameterValueOnMaterials("BloomIntensity", glowIntensity * 0.8)
-                mesh:SetScalarParameterValueOnMaterials("GlowIntensity", glowIntensity)
-                
-                -- Colors ko aur bright karo
-                local brightVis = LinearColor(
-                    math.min(visColor.R * (1 + glowIntensity * 0.15), 255),
-                    math.min(visColor.G * (1 + glowIntensity * 0.15), 255),
-                    math.min(visColor.B * (1 + glowIntensity * 0.15), 255),
-                    255
-                )
-                mesh:SetVisibleDyeingColor(brightVis)
-            end)
-        end
     end)
     pcall(function()
         mesh:SetDrawHighlight(true)
@@ -876,7 +892,7 @@ _G.ChamsCleanup = function()
 end
 
 -- ============================================================
--- MENU (with Glow ON/OFF + Glow Intensity Slider)
+-- MENU (with Wallhack color controls + Vehicle ESP)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -999,35 +1015,20 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- ===== GLOW SECTION =====
-            { UI = AliasMap.Title, Text = "--- GLOW ---" },
-            {
-                Key = "WH_GlowEnabled",
-                UI = AliasMap.TitleSwitcher,
-                Text = "Glow ON/OFF",
-                GetFunc = function() return _G.ESPConfig.GlowEnabled end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.GlowEnabled = value
-                    print("[MOD] GLOW: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            },
-            {
-                Key = "WH_GlowIntensity",
-                UI = AliasMap.Slider,
-                Text = "Glow Intensity",
-                Min = 1,
-                Max = 10,
-                Step = 0.5,
-                IsPercent = false,
-                GetFunc = function() return _G.ESPConfig.GlowIntensity or 5 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.GlowIntensity = value
-                    return true
-                end
-            },
-            -- ===== END GLOW SECTION =====
             -- ===== END WALLHACK SECTION =====
+            -- ===== VEHICLE ESP =====
+            {
+                Key = "VehicleESP",
+                UI = AliasMap.TitleSwitcher,
+                Text = "VEHICLE ESP",
+                GetFunc = function() return _G.MOD_VehicleESP end,
+                SetFunc = function(_, value)
+                    _G.MOD_VehicleESP = value
+                    print("[MOD] VEHICLE ESP: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            -- ===== END VEHICLE ESP =====
             {
                 Key = "FPS165",
                 UI = AliasMap.Switcher,
