@@ -513,16 +513,22 @@ pcall(function()
     local Web = require("client.slua.logic.url.logic_webview_sdk")
     local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
     if Msg and Msg.Show then
-        Msg.Show(4, "✦ TRNDRAVIX ULTIMATE ✦",
-        "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
-        "  ■ DEVELOPER   : @TrnDravix\n" ..
-        "  ■ STATUS      : UNDETECTED\n" ..
-        "  ■ BYPASS      : 10-LAYER SHIELD\n" ..
-        "  ■ FEATURES    : 20+ PREMIUM\n" ..
-        "  ■ PERFORMANCE : OPTIMIZED\n" ..
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" ..
-        "  [ ✔ ] BUILD LOADED SUCCESSFULLY\n" ..
-        "  [ ➜ ] CLICK TO JOIN DEVELOPER CHANNEL", onClick)
+        Msg.Show(4, "◆ TRNDRAVIX ULTIMATE ◆",
+        "\n┌────────────────────────────────────────┐\n" ..
+        "│  DEVELOPER  : @TrnDravix              │\n" ..
+        "│  STATUS     : UNDETECTED & OPTIMIZED  │\n" ..
+        "│  BYPASS     : 5-LAYER DEEP SHIELD     │\n" ..
+        "│────────────────────────────────────────│\n" ..
+        "│  FEATURES   :                         │\n" ..
+        "│  ✔ Aimbot        ✔ Wall ESP          │\n" ..
+        "│  ✔ Wallhack      ✔ 165 FPS           │\n" ..
+        "│  ✔ No Grass      ✔ iPad View         │\n" ..
+        "│  ✔ Skins         ✔ Glow Effects      │\n" ..
+        "│  ✔ Loot ESP      ✔ Memory Tweaks     │\n" ..
+        "│────────────────────────────────────────│\n" ..
+        "│  BUILD : PREMIUM LOADED SUCCESSFULLY  │\n" ..
+        "└────────────────────────────────────────┘\n" ..
+        "        TAP TO CONNECT WITH DEVELOPER", onClick)
     end
 end)
 
