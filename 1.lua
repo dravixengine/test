@@ -36,7 +36,7 @@ if _G.Mod_Chams_GreenRGB == nil then _G.Mod_Chams_GreenRGB = {R=0, G=255, B=0, A
 if _G.Mod_Chams_YellowRGB == nil then _G.Mod_Chams_YellowRGB = {R=255, G=255, B=0, A=255} end
 
 -- ============================================================
--- WALLHACK COLOR + GLOW CONFIG
+-- WALLHACK COLOR + GLOW CONFIG (WITH CUSTOM COLORS)
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
@@ -49,6 +49,11 @@ _G.ESPConfig = _G.ESPConfig or {
     BlackSky = false,
     RainEnabled = false,
     SnowEnabled = false,
+    -- Custom Colors (Default: Green for Visible, Yellow for Invisible)
+    UseCustomVisible = false,
+    UseCustomInvisible = false,
+    CustomVisibleColor = {R=0, G=255, B=0, A=255},
+    CustomInvisibleColor = {R=255, G=255, B=0, A=255},
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -63,6 +68,22 @@ local function GetColorFromIndex(idx)
         {R=255,G=0,B=255,A=255},   -- 7 Purple
     }
     return colors[idx] or colors[4]
+end
+
+local function GetWallhackColor(isVisible)
+    if isVisible then
+        if _G.ESPConfig.UseCustomVisible then
+            return _G.ESPConfig.CustomVisibleColor
+        else
+            return GetColorFromIndex(_G.ESPConfig.WallhackVisibleColor)
+        end
+    else
+        if _G.ESPConfig.UseCustomInvisible then
+            return _G.ESPConfig.CustomInvisibleColor
+        else
+            return GetColorFromIndex(_G.ESPConfig.WallhackInvisibleColor)
+        end
+    end
 end
 
 -- ============================================================
@@ -742,13 +763,22 @@ local function ChamsSetupConsole()
     end)
 end
 
-local function ChamsApplyToMesh(mesh, visColor, occColor)
+local function ChamsApplyToMesh(mesh, isVisible)
     if not mesh or not slua.isValid(mesh) then return end
+    
+    local colorTable = GetWallhackColor(isVisible)
+    local visColor = LinearColor(
+        colorTable.R / 255,
+        colorTable.G / 255,
+        colorTable.B / 255,
+        1.0
+    )
+    
     pcall(function()
         mesh:SetDrawDyeing(true)
         mesh:SetDrawDyeingMode(1)
         mesh:SetVisibleDyeingColor(visColor)
-        mesh:SetOccludedDyeingColor(occColor)
+        mesh:SetOccludedDyeingColor(visColor)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
         
@@ -760,14 +790,6 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
                 mesh:SetScalarParameterValueOnMaterials("Brightness", glowIntensity * 0.5)
                 mesh:SetScalarParameterValueOnMaterials("BloomIntensity", glowIntensity * 0.8)
                 mesh:SetScalarParameterValueOnMaterials("GlowIntensity", glowIntensity)
-                
-                local brightVis = LinearColor(
-                    math.min(visColor.R * (1 + glowIntensity * 0.15), 255),
-                    math.min(visColor.G * (1 + glowIntensity * 0.15), 255),
-                    math.min(visColor.B * (1 + glowIntensity * 0.15), 255),
-                    255
-                )
-                mesh:SetVisibleDyeingColor(brightVis)
             end)
         end
     end)
@@ -781,7 +803,6 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
         mesh:SetIdeaOutlineNew(true)
         mesh:SetIdeaOutlineOcclusionHighlight(true)
         mesh:OverrideIdeaOutlineColor(visColor)
-        mesh:SetIdeaOutlineOcclusionColor(occColor)
         mesh:OverrideIdeaOutlineThickness(10.0)
         mesh:SetIdeaOverrideOutlineAndOcclusion(true)
     end)
@@ -812,48 +833,6 @@ local function ChamsTick()
 
         ChamsSetupConsole()
 
-        local LinearColor = import("LinearColor")
-        if not LinearColor then return end
-
-        local cfg = _G.ESPConfig
-        local bright = cfg.WallhackBrightness / 25.0
-
-        local visColorTable = GetColorFromIndex(cfg.WallhackVisibleColor)
-        local occColorTable = GetColorFromIndex(cfg.WallhackInvisibleColor)
-
-        local visColor = LinearColor(
-            visColorTable.R / 255 * bright,
-            visColorTable.G / 255 * bright,
-            visColorTable.B / 255 * bright,
-            100
-        )
-        local occColor = LinearColor(
-            occColorTable.R / 255 * bright,
-            occColorTable.G / 255 * bright,
-            occColorTable.B / 255 * bright,
-            100
-        )
-
-        local bVisColor = LinearColor(
-            visColorTable.R / 255 * bright * 0.7,
-            visColorTable.G / 255 * bright * 0.7,
-            visColorTable.B / 255 * bright * 0.7,
-            100
-        )
-        local bOccColor = LinearColor(
-            occColorTable.R / 255 * bright * 0.7,
-            occColorTable.G / 255 * bright * 0.7,
-            occColorTable.B / 255 * bright * 0.7,
-            100
-        )
-
-        local colors = {
-            vis = visColor,
-            occ = occColor,
-            bVis = bVisColor,
-            bOcc = bOccColor
-        }
-
         _G._ChamsTickCount = _G._ChamsTickCount + 1
         if _G._ChamsTickCount % 6 == 0 then
             _G._ChamsProcessed = {}
@@ -876,14 +855,11 @@ local function ChamsTick()
 
             local isAI = false
             pcall(function() isAI = Game:IsAI(pawn) end)
-            if isAI and not cfg.ShowAI then goto continue end
-
-            local visColor = isAI and colors.bVis or colors.vis
-            local occColor = isAI and colors.bOcc or colors.occ
+            if isAI and not _G.ESPConfig.ShowAI then goto continue end
 
             pcall(function()
                 if slua.isValid(pawn.Mesh) then
-                    ChamsApplyToMesh(pawn.Mesh, visColor, occColor)
+                    ChamsApplyToMesh(pawn.Mesh, true)
                 end
             end)
 
@@ -893,7 +869,7 @@ local function ChamsTick()
                     for _, slot in ipairs(avatarSlots) do
                         local mesh = avatarComp:GetMeshCompBySlot(slot)
                         if slua.isValid(mesh) then
-                            ChamsApplyToMesh(mesh, visColor, occColor)
+                            ChamsApplyToMesh(mesh, true)
                         end
                     end
                 end
@@ -904,7 +880,7 @@ local function ChamsTick()
                 if weapon and slua.isValid(weapon) then
                     local mesh = weapon.Mesh
                     if mesh then
-                        ChamsApplyToMesh(mesh, visColor, occColor)
+                        ChamsApplyToMesh(mesh, true)
                     end
                 end
             end)
@@ -1255,6 +1231,60 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            -- Custom Visible Color Toggle + RGB Sliders
+            {
+                Key = "WH_UseCustomVisible",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Use Custom Visible Color",
+                GetFunc = function() return _G.ESPConfig.UseCustomVisible or false end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.UseCustomVisible = value
+                    print("[MOD] Custom Visible: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "WH_CustomVisibleR",
+                UI = AliasMap.Slider,
+                Text = "Custom Visible - Red (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.ESPConfig.CustomVisibleColor.R or 0) / 255 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.CustomVisibleColor.R = math.floor(value * 255)
+                    return true
+                end
+            },
+            {
+                Key = "WH_CustomVisibleG",
+                UI = AliasMap.Slider,
+                Text = "Custom Visible - Green (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.ESPConfig.CustomVisibleColor.G or 255) / 255 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.CustomVisibleColor.G = math.floor(value * 255)
+                    return true
+                end
+            },
+            {
+                Key = "WH_CustomVisibleB",
+                UI = AliasMap.Slider,
+                Text = "Custom Visible - Blue (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.ESPConfig.CustomVisibleColor.B or 0) / 255 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.CustomVisibleColor.B = math.floor(value * 255)
+                    return true
+                end
+            },
             {
                 Key = "WH_InvisibleColor",
                 UI = AliasMap.Switcher,
@@ -1264,6 +1294,60 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.ESPConfig.WallhackInvisibleColor or 3 end,
                 SetFunc = function(_, value)
                     _G.ESPConfig.WallhackInvisibleColor = value
+                    return true
+                end
+            },
+            -- Custom Invisible Color Toggle + RGB Sliders
+            {
+                Key = "WH_UseCustomInvisible",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Use Custom Invisible Color",
+                GetFunc = function() return _G.ESPConfig.UseCustomInvisible or false end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.UseCustomInvisible = value
+                    print("[MOD] Custom Invisible: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "WH_CustomInvisibleR",
+                UI = AliasMap.Slider,
+                Text = "Custom Invisible - Red (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.ESPConfig.CustomInvisibleColor.R or 255) / 255 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.CustomInvisibleColor.R = math.floor(value * 255)
+                    return true
+                end
+            },
+            {
+                Key = "WH_CustomInvisibleG",
+                UI = AliasMap.Slider,
+                Text = "Custom Invisible - Green (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.ESPConfig.CustomInvisibleColor.G or 255) / 255 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.CustomInvisibleColor.G = math.floor(value * 255)
+                    return true
+                end
+            },
+            {
+                Key = "WH_CustomInvisibleB",
+                UI = AliasMap.Slider,
+                Text = "Custom Invisible - Blue (0-255)",
+                Min = 0,
+                Max = 255,
+                Step = 1,
+                IsPercent = false,
+                GetFunc = function() return (_G.ESPConfig.CustomInvisibleColor.B or 0) / 255 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.CustomInvisibleColor.B = math.floor(value * 255)
                     return true
                 end
             },
