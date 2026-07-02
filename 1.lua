@@ -513,11 +513,16 @@ pcall(function()
     local Web = require("client.slua.logic.url.logic_webview_sdk")
     local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
     if Msg and Msg.Show then
-        Msg.Show(4, "✦ TrnDravix – ELITE ULTIMATE ✦",
-        "\n★ Developer : @TrnDravix\n" ..
-        "★ Status    : UNDETECTED & OPTIMIZED\n" ..
-        "★ Bypass    : 5-Layer Deep Shield + All Visuals\n\n" ..
-        "✓ Premium Build Loaded Successfully!", onClick)
+        Msg.Show(4, "✦ TRNDRAVIX ULTIMATE ✦",
+        "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
+        "  ■ DEVELOPER   : @TrnDravix\n" ..
+        "  ■ STATUS      : UNDETECTED\n" ..
+        "  ■ BYPASS      : 10-LAYER SHIELD\n" ..
+        "  ■ FEATURES    : 20+ PREMIUM\n" ..
+        "  ■ PERFORMANCE : OPTIMIZED\n" ..
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" ..
+        "  [ ✔ ] BUILD LOADED SUCCESSFULLY\n" ..
+        "  [ ➜ ] CLICK TO JOIN DEVELOPER CHANNEL", onClick)
     end
 end)
 
@@ -688,10 +693,11 @@ local function ESPTick()
         end
     end
 
-    if not crowded and HUD and currentPawn then
-        HUD:AddDebugText(string.format("BOT : %d     PLAYER : %d", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=150}, {X=0,Y=0,Z=150}, {R=255,G=255,B=0,A=255}, true, false, true, nil, 1.0, true)
-        HUD:AddDebugText("✦REAL DEV @TrnDravix✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
-    end
+   if not crowded and HUD and currentPawn then
+    HUD:AddDebugText(string.format("═══ BOT : %d  ═══  PLAYER : %d ═══", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=50,B=50,A=255}, true, false, true, nil, 1.0, true)
+    HUD:AddDebugText("► TRNDRAVIX ◄", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=255,G=255,B=255,A=255}, true, false, true, nil, 1.0, true)
+    HUD:AddDebugText("► STATUS : UNDETECTED ◄", currentPawn, 1, {X=0,Y=0,Z=135}, {X=0,Y=0,Z=135}, {R=255,G=200,B=0,A=255}, true, false, true, nil, 1.0, true)
+end
     
     -- Call LootBox ESP
     ESPLootBox()
