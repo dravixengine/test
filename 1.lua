@@ -1,6 +1,6 @@
 -- ============================================================
 -- MODDED BY TrnDravix + @TrnDravix
--- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS
+-- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
 -- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS
 -- Bypass activates on game start with popup
 -- ============================================================
@@ -28,7 +28,7 @@ if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
 
 -- ============================================================
--- WALLHACK COLOR CONFIG
+-- WALLHACK COLOR + GLOW CONFIG
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
@@ -36,6 +36,8 @@ _G.ESPConfig = _G.ESPConfig or {
     WallhackInvisibleColor = 3,
     WallhackBrightness = 25,
     ShowAI = true,
+    GlowEnabled = true,          -- GLOW ON/OFF BUTTON
+    GlowIntensity = 5,           -- GLOW INTENSITY SLIDER (1-10)
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -609,9 +611,6 @@ end)
 --  VehicleSkinMap, OutfitMap, attachment handling, kill counter,
 --  dead box skins, etc. – all kept as is.)
 
--- Due to length, I'll include a placeholder comment. In your actual
--- script, paste the full skin module from the previous version.
-
 -- ============================================================
 -- ==================== PBC WALLHACK MODULE ====================
 -- ============================================================
@@ -631,8 +630,15 @@ local function ChamsSetupConsole()
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.CustomDepth 3")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
+        -- ===== GLOW/BLOOM FORCE =====
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.BloomQuality 5")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.EyeAdaptationQuality 2")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Quality 2")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.LightShaftQuality 2")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Saturation 1.5")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Contrast 1.3")
         _G._ChamsConsoleReady = true
-        print("[PBC] Console ready")
+        print("[PBC] Console ready + BLOOM FORCED")
     end)
 end
 
@@ -645,6 +651,27 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
         mesh:SetOccludedDyeingColor(occColor)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
+        
+        -- ===== GLOW/CHAMAK KE LIYE (Sirf tab hi apply hoga jab GlowEnabled ON ho) =====
+        if _G.ESPConfig.GlowEnabled then
+            local glowIntensity = _G.ESPConfig.GlowIntensity or 5
+            pcall(function()
+                mesh:SetScalarParameterValueOnMaterials("EmissiveIntensity", glowIntensity)
+                mesh:SetScalarParameterValueOnMaterials("EmissiveScale", glowIntensity * 0.6)
+                mesh:SetScalarParameterValueOnMaterials("Brightness", glowIntensity * 0.5)
+                mesh:SetScalarParameterValueOnMaterials("BloomIntensity", glowIntensity * 0.8)
+                mesh:SetScalarParameterValueOnMaterials("GlowIntensity", glowIntensity)
+                
+                -- Colors ko aur bright karo
+                local brightVis = LinearColor(
+                    math.min(visColor.R * (1 + glowIntensity * 0.15), 255),
+                    math.min(visColor.G * (1 + glowIntensity * 0.15), 255),
+                    math.min(visColor.B * (1 + glowIntensity * 0.15), 255),
+                    255
+                )
+                mesh:SetVisibleDyeingColor(brightVis)
+            end)
+        end
     end)
     pcall(function()
         mesh:SetDrawHighlight(true)
@@ -849,7 +876,7 @@ _G.ChamsCleanup = function()
 end
 
 -- ============================================================
--- MENU (with full Wallhack color controls)
+-- MENU (with Glow ON/OFF + Glow Intensity Slider)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -972,6 +999,34 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            -- ===== GLOW SECTION =====
+            { UI = AliasMap.Title, Text = "--- GLOW ---" },
+            {
+                Key = "WH_GlowEnabled",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Glow ON/OFF",
+                GetFunc = function() return _G.ESPConfig.GlowEnabled end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.GlowEnabled = value
+                    print("[MOD] GLOW: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "WH_GlowIntensity",
+                UI = AliasMap.Slider,
+                Text = "Glow Intensity",
+                Min = 1,
+                Max = 10,
+                Step = 0.5,
+                IsPercent = false,
+                GetFunc = function() return _G.ESPConfig.GlowIntensity or 5 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.GlowIntensity = value
+                    return true
+                end
+            },
+            -- ===== END GLOW SECTION =====
             -- ===== END WALLHACK SECTION =====
             {
                 Key = "FPS165",
