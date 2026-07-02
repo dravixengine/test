@@ -26,8 +26,7 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
-if _G.ESPConfig.RainEnabled == nil then _G.ESPConfig.RainEnabled = false end
-if _G.ESPConfig.SnowEnabled == nil then _G.ESPConfig.SnowEnabled = false end
+
 -- ============================================================
 -- WALLHACK COLOR + GLOW CONFIG
 -- ============================================================
@@ -39,6 +38,10 @@ _G.ESPConfig = _G.ESPConfig or {
     ShowAI = true,
     GlowEnabled = true,          -- GLOW ON/OFF BUTTON
     GlowIntensity = 5,           -- GLOW INTENSITY SLIDER (1-10)
+    -- SCENE CONFIGS (ADDED FROM SOURCE)
+    BlackSky = false,
+    RainEnabled = false,
+    SnowEnabled = false,
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -53,6 +56,88 @@ local function GetColorFromIndex(idx)
         {R=255,G=0,B=255,A=255},   -- 7 Purple
     }
     return colors[idx] or colors[4]
+end
+
+-- ============================================================
+-- SCENE FUNCTIONS (IMPROVED FROM SOURCE)
+-- ============================================================
+local function ExecuteConsoleCommand(cmd, value)
+    local instance = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
+    if instance then
+        pcall(function() instance:ExecuteCMD(cmd, value) end)
+    else
+        local SettingUtil = require("client.slua.logic.setting.setting_util")
+        if SettingUtil and SettingUtil.GetGameInstance then
+            local gi = SettingUtil:GetGameInstance()
+            if gi then pcall(function() gi:ExecuteCMD(cmd, value) end) end
+        end
+    end
+end
+
+local function GetSubsystemMgr()
+    if _G.SubsystemMgr then return _G.SubsystemMgr end
+    local ok, mgr = pcall(require, "GameLua.GameCore.Module.Subsystem.SubsystemMgr")
+    return ok and mgr or nil
+end
+
+function SetBlackSky(enabled)
+    ExecuteConsoleCommand("r.CylinderMaxDrawHeight", enabled and "9999" or "0")
+end
+
+function SetRainEnabled(enabled)
+    pcall(function()
+        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(playerController) then return end
+        local playerCharacter = playerController:GetPlayerCharacterSafety()
+        if slua.isValid(playerCharacter) then
+            local EScreenParticleEffectType = import("EScreenParticleEffectType")
+            if EScreenParticleEffectType then
+                if playerCharacter.SetRainyEffectEnable then
+                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Rainy, enabled and true or false, enabled and 500 or 0)
+                end
+            end
+        end
+        local SubsystemMgr = GetSubsystemMgr()
+        if SubsystemMgr then
+            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
+            if slua.isValid(weatherSubsystem) then
+                if enabled then
+                    if weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
+                else
+                    if weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
+                end
+            end
+        end
+    end)
+end
+
+function SetSnowEnabled(enabled)
+    pcall(function()
+        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(playerController) then return end
+        local playerCharacter = playerController:GetPlayerCharacterSafety()
+        if slua.isValid(playerCharacter) then
+            local EScreenParticleEffectType = import("EScreenParticleEffectType")
+            if EScreenParticleEffectType then
+                if playerCharacter.SetRainyEffectEnable then
+                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Snowy, enabled and true or false, enabled and 500 or 0)
+                end
+            end
+        end
+        local SubsystemMgr = GetSubsystemMgr()
+        if SubsystemMgr then
+            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
+            if slua.isValid(weatherSubsystem) then
+                if enabled then
+                    if weatherSubsystem.StartSnowScreenEffect then weatherSubsystem:StartSnowScreenEffect()
+                    elseif weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
+                else
+                    if weatherSubsystem.StopSnowScreenEffect then weatherSubsystem:StopSnowScreenEffect()
+                    elseif weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
+                end
+            end
+        end
+    end)
 end
 
 -- ============================================================
@@ -372,122 +457,6 @@ end)
 -- ============================================================
 -- AIMBOT + FEATURES
 -- ============================================================
-
-
--- ==================== SCENE FUNCTIONS ====================
-local function ExecuteConsoleCommand(cmd, value)
-    local instance = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
-    if instance then
-        pcall(function() instance:ExecuteCMD(cmd, value) end)
-    else
-        local SettingUtil = require("client.slua.logic.setting.setting_util")
-        if SettingUtil and SettingUtil.GetGameInstance then
-            local gi = SettingUtil:GetGameInstance()
-            if gi then pcall(function() gi:ExecuteCMD(cmd, value) end) end
-        end
-    end
-end
-
-function SetBlackSky(enabled)
-    ExecuteConsoleCommand("r.CylinderMaxDrawHeight", enabled and "9999" or "0")
-end
-
-function SetFogRemoval(enabled)
-    ExecuteConsoleCommand("r.Fog", enabled and "0" or "1")
-    ExecuteConsoleCommand("r.VolumetricFog", enabled and "0" or "1")
-end
-
-function SetGrassRemoval(enabled)
-    ExecuteConsoleCommand("grass.DensityScale", enabled and "0" or "1")
-    ExecuteConsoleCommand("foliage.DensityScale", enabled and "0" or "1")
-end
-
-function SetTreeRemoval(enabled)
-    ExecuteConsoleCommand("foliage.TreeDensityScale", enabled and "0" or "1")
-end
-
-function SetWaterRemoval(enabled)
-    ExecuteConsoleCommand("r.Water", enabled and "0" or "1")
-end
-
-function SetForceChinese(enabled)
-    if enabled then
-        pcall(function()
-            local gi = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
-            if gi and gi.SetCurrentCulture then gi:SetCurrentCulture("zh-CN") end
-        end)
-    else
-        pcall(function()
-            local gi = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
-            if gi and gi.SetCurrentCulture then gi:SetCurrentCulture("en") end
-        end)
-    end
-end
-
--- ==================== RAIN EFFECT ====================
-local function GetSubsystemMgr()
-    if _G.SubsystemMgr then return _G.SubsystemMgr end
-    local ok, mgr = pcall(require, "GameLua.GameCore.Module.Subsystem.SubsystemMgr")
-    return ok and mgr or nil
-end
-
-function SetRainEnabled(enabled)
-    pcall(function()
-        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-        if not slua.isValid(playerController) then return end
-        local playerCharacter = playerController:GetPlayerCharacterSafety()
-        if slua.isValid(playerCharacter) then
-            local EScreenParticleEffectType = import("EScreenParticleEffectType")
-            if EScreenParticleEffectType then
-                if playerCharacter.SetRainyEffectEnable then
-                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Rainy, enabled and true or false, enabled and 500 or 0)
-                end
-            end
-        end
-        local SubsystemMgr = GetSubsystemMgr()
-        if SubsystemMgr then
-            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
-            if slua.isValid(weatherSubsystem) then
-                if enabled then
-                    if weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
-                else
-                    if weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
-                end
-            end
-        end
-    end)
-end
-
--- ==================== SNOW EFFECT ====================
-function SetSnowEnabled(enabled)
-    pcall(function()
-        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-        if not slua.isValid(playerController) then return end
-        local playerCharacter = playerController:GetPlayerCharacterSafety()
-        if slua.isValid(playerCharacter) then
-            local EScreenParticleEffectType = import("EScreenParticleEffectType")
-            if EScreenParticleEffectType then
-                if playerCharacter.SetRainyEffectEnable then
-                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Snowy, enabled and true or false, enabled and 500 or 0)
-                end
-            end
-        end
-        local SubsystemMgr = GetSubsystemMgr()
-        if SubsystemMgr then
-            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
-            if slua.isValid(weatherSubsystem) then
-                if enabled then
-                    if weatherSubsystem.StartSnowScreenEffect then weatherSubsystem:StartSnowScreenEffect()
-                    elseif weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
-                else
-                    if weatherSubsystem.StopSnowScreenEffect then weatherSubsystem:StopSnowScreenEffect()
-                    elseif weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
-                end
-            end
-        end
-    end)
-end
-
 _G.Enable165FPSLogic = function()
   pcall(function()
     local graphics = require("client.slua.logic.setting.logic_setting_graphics")
@@ -684,8 +653,7 @@ local function ApplyHardAimbot()
                 end
             end
             entity.AutoAimingConfig = entity.AutoAimingConfig
-        end
-    end)
+        end    end)
 end
 
 local function AttachAimbotTimer()
@@ -993,7 +961,7 @@ _G.ChamsCleanup = function()
 end
 
 -- ============================================================
--- MENU (with Glow ON/OFF + Glow Intensity Slider)
+-- MENU (with Glow ON/OFF + Glow Intensity Slider + Scene Features)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -1146,8 +1114,8 @@ _G.InitModMenuTab = function()
             -- ===== END GLOW SECTION =====
             -- ===== END WALLHACK SECTION =====
             
-                        { UI = AliasMap.Title, Text = "--- OTHERS OPTIONS ---" },
-
+            -- ===== SCENE FEATURES SECTION (ADDED FROM SOURCE) =====
+            { UI = AliasMap.Title, Text = "--- SCENE EFFECTS ---" },
             {
                 Key = "ESP_BlackSky",
                 UI = AliasMap.TitleSwitcher,
@@ -1159,30 +1127,30 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-                        -- RAIN TOGGLE (ISKO DAALO)
-{
-    Key = "ESP_RainEnabled",
-    UI = AliasMap.TitleSwitcher,
-    Text = "Rain Effect",
-    GetFunc = function() return _G.ESPConfig.RainEnabled end,
-    SetFunc = function(ctrl, value)
-        _G.ESPConfig.RainEnabled = value
-        SetRainEnabled(value)
-        return true
-    end
-},
-
-{
-    Key = "ESP_SnowEnabled",
-    UI = AliasMap.TitleSwitcher,
-    Text = "Snow Effect",
-    GetFunc = function() return _G.ESPConfig.SnowEnabled end,
-    SetFunc = function(ctrl, value)
-        _G.ESPConfig.SnowEnabled = value
-        SetSnowEnabled(value)
-        return true
-    end
-},
+            {
+                Key = "ESP_RainEnabled",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Rain Effect",
+                GetFunc = function() return _G.ESPConfig.RainEnabled end,
+                SetFunc = function(ctrl, value)
+                    _G.ESPConfig.RainEnabled = value
+                    SetRainEnabled(value)
+                    return true
+                end
+            },
+            {
+                Key = "ESP_SnowEnabled",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Snow Effect",
+                GetFunc = function() return _G.ESPConfig.SnowEnabled end,
+                SetFunc = function(ctrl, value)
+                    _G.ESPConfig.SnowEnabled = value
+                    SetSnowEnabled(value)
+                    return true
+                end
+            },
+            -- ===== END SCENE FEATURES =====
+            
             {
                 Key = "FPS165",
                 UI = AliasMap.Switcher,
@@ -1195,7 +1163,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            
             {
                 Key = "NoGrass",
                 UI = AliasMap.Switcher,
@@ -1274,6 +1241,13 @@ _G.InitModMenuTab = function()
         UIManager._IsModMenuHooked = true
     end
 end
+
+-- Apply scene settings from config on load
+pcall(function()
+    if _G.ESPConfig.BlackSky then SetBlackSky(true) end
+    if _G.ESPConfig.RainEnabled then SetRainEnabled(true) end
+    if _G.ESPConfig.SnowEnabled then SetSnowEnabled(true) end
+end)
 
 _G.InitModMenuTab()
 
