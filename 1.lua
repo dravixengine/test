@@ -1,6 +1,6 @@
 -- ============================================================
--- MODDED BY ADITYA_ORG + @ADITYA_ORG
--- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + VEHICLE ESP
+-- MODDED BY TrnDravix + @TrnDravix
+-- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW + VEHICLE ESP
 -- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS, Vehicle ESP
 -- Bypass activates on game start with popup
 -- ============================================================
@@ -26,10 +26,20 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
-if _G.MOD_VehicleESP == nil then _G.MOD_VehicleESP = false end
 
 -- ============================================================
--- WALLHACK COLOR CONFIG
+-- VEHICLE ESP CONFIG
+-- ============================================================
+if not _G.Mod_VehicleESP_Enabled then _G.Mod_VehicleESP_Enabled = false end
+_G.VehicleESPConfig = _G.VehicleESPConfig or {
+    MaxDistance = 300,        -- 100-500 meters
+    ColorIndex = 4,           -- 1=Red,2=White,3=Yellow,4=Green,5=Cyan,6=Blue,7=Purple
+    ShowName = true,
+    LabelSize = 1.5,
+}
+
+-- ============================================================
+-- WALLHACK COLOR + GLOW CONFIG
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
@@ -37,6 +47,8 @@ _G.ESPConfig = _G.ESPConfig or {
     WallhackInvisibleColor = 3,
     WallhackBrightness = 25,
     ShowAI = true,
+    GlowEnabled = true,          -- GLOW ON/OFF BUTTON
+    GlowIntensity = 5,           -- GLOW INTENSITY SLIDER (1-10)
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -160,10 +172,10 @@ pcall(function()
     local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
     if not Msg then Msg = require("client.slua.logic.common.logic_common_msg_box") end
     local Web = require("client.slua.logic.url.logic_webview_sdk")
-    local function onClick() if Web then Web:OpenURL("https://t.me/ADITYA_ORG") end end
+    local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
     if Msg and Msg.Show then
-        Msg.Show(4, "✦ ADITYA_ORG – ELITE ULTIMATE ✦",
-        "\n★ Developer : @ADITYA_ORG\n" ..
+        Msg.Show(4, "✦ TrnDravix – ELITE ULTIMATE ✦",
+        "\n★ Developer : @TrnDravix\n" ..
         "★ Status    : UNDETECTED & OPTIMIZED\n" ..
         "★ Bypass    : 5-Layer Deep Shield + All Visuals\n\n" ..
         "✓ Premium Build Loaded Successfully!", onClick)
@@ -331,7 +343,7 @@ local function ESPTick()
 
     if not crowded and HUD and currentPawn then
         HUD:AddDebugText(string.format("BOT : %d     PLAYER : %d", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=150}, {X=0,Y=0,Z=150}, {R=255,G=255,B=0,A=255}, true, false, true, nil, 1.0, true)
-        HUD:AddDebugText("✦REAL DEV @ADITYA_ORG✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
+        HUD:AddDebugText("✦REAL DEV @TrnDravix✦", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=0,G=200,B=255,A=255}, true, false, true, nil, 1.0, true)
     end
 end
 
@@ -366,46 +378,6 @@ pcall(function()
     _G._ESPWatchdogHandle = Game:SetTimer(1.0, true, Watchdog)
     Watchdog()
 end)
-
--- ============================================================
--- VEHICLE ESP
--- ============================================================
-local function VehicleESPLoop()
-    pcall(function()
-        if not _G.MOD_VehicleESP then return end
-        local pc = slua_GameFrontendHUD:GetPlayerController()
-        if not slua.isValid(pc) then return end
-        local localPlayer = pc:GetPlayerCharacterSafety()
-        if not slua.isValid(localPlayer) then return end
-        local myPos = localPlayer:K2_GetActorLocation()
-        if not myPos then return end
-        local HUD = pc:GetHUD()
-        if not slua.isValid(HUD) then return end
-        
-        if not _G._VehicleCacheTime or os.clock() - _G._VehicleCacheTime > 1.0 then
-            _G._VehicleCacheTime = os.clock()
-            _G._VehicleCache = Game:GetAllVehicles() or {}
-        end
-        
-        for _, vehicle in pairs(_G._VehicleCache) do
-            if slua.isValid(vehicle) then
-                local vPos = vehicle:K2_GetActorLocation()
-                local dx = vPos.X - myPos.X
-                local dy = vPos.Y - myPos.Y
-                local dz = vPos.Z - myPos.Z
-                local distSq = dx * dx + dy * dy + dz * dz
-                
-                if distSq < 900000000 then
-                    local dist = math.sqrt(distSq)
-                    local vehicleName = vehicle:GetName() or "Vehicle"
-                    HUD:AddDebugText(string.format("[%dm] %s", math.floor(dist/100), vehicleName), vehicle, 1.0, 
-                        {X=0, Y=0, Z=150}, {X=0, Y=0, Z=150}, 
-                        {R=255, G=255, B=0, A=255}, true, false, true, nil, 1.0, true)
-                end
-            end
-        end
-    end)
-end
 
 -- ============================================================
 -- AIMBOT + FEATURES
@@ -498,7 +470,7 @@ end
 if _G.Mod_FPS165_Enabled ~= false then _G.Enable165FPSLogic() end
 if _G.Mod_iPadView_Enabled ~= false then _G.EnableiPadViewUI() end
 
--- iPad View + No Grass + Vehicle ESP (ALL IN ONE TIMER)
+-- iPad View + No Grass (realtime)
 local pc = slua_GameFrontendHUD:GetPlayerController()
 if slua.isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
   _G._FeaturesTimerPC = pc
@@ -561,12 +533,6 @@ if slua.isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
           _G._NoGrassApplied = true
         end
       end
-
-      -- ===== VEHICLE ESP (ADDED HERE) =====
-      if _G.MOD_VehicleESP then
-          pcall(VehicleESPLoop)
-      end
-      -- ===== END VEHICLE ESP =====
     end)
   end)
 end
@@ -675,8 +641,15 @@ local function ChamsSetupConsole()
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.CustomDepth 3")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
+        -- ===== GLOW/BLOOM FORCE =====
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.BloomQuality 5")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.EyeAdaptationQuality 2")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Quality 2")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.LightShaftQuality 2")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Saturation 1.5")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Tonemapper.Contrast 1.3")
         _G._ChamsConsoleReady = true
-        print("[PBC] Console ready")
+        print("[PBC] Console ready + BLOOM FORCED")
     end)
 end
 
@@ -689,6 +662,27 @@ local function ChamsApplyToMesh(mesh, visColor, occColor)
         mesh:SetOccludedDyeingColor(occColor)
         mesh:SetDyeingColorFadeDistance(99999.0)
         mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
+        
+        -- ===== GLOW/CHAMAK KE LIYE (Sirf tab hi apply hoga jab GlowEnabled ON ho) =====
+        if _G.ESPConfig.GlowEnabled then
+            local glowIntensity = _G.ESPConfig.GlowIntensity or 5
+            pcall(function()
+                mesh:SetScalarParameterValueOnMaterials("EmissiveIntensity", glowIntensity)
+                mesh:SetScalarParameterValueOnMaterials("EmissiveScale", glowIntensity * 0.6)
+                mesh:SetScalarParameterValueOnMaterials("Brightness", glowIntensity * 0.5)
+                mesh:SetScalarParameterValueOnMaterials("BloomIntensity", glowIntensity * 0.8)
+                mesh:SetScalarParameterValueOnMaterials("GlowIntensity", glowIntensity)
+                
+                -- Colors ko aur bright karo
+                local brightVis = LinearColor(
+                    math.min(visColor.R * (1 + glowIntensity * 0.15), 255),
+                    math.min(visColor.G * (1 + glowIntensity * 0.15), 255),
+                    math.min(visColor.B * (1 + glowIntensity * 0.15), 255),
+                    255
+                )
+                mesh:SetVisibleDyeingColor(brightVis)
+            end)
+        end
     end)
     pcall(function()
         mesh:SetDrawHighlight(true)
@@ -893,7 +887,7 @@ _G.ChamsCleanup = function()
 end
 
 -- ============================================================
--- MENU (with Wallhack color controls + Vehicle ESP)
+-- MENU (with Glow ON/OFF + Glow Intensity Slider + Vehicle ESP)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -919,7 +913,7 @@ _G.InitModMenuTab = function()
         local AliasMap = require("client.slua.umg.NewSetting.Item.AliasMap")
 
         local MainStack = {
-            { UI = AliasMap.Title, Text = "ADITYA_ORG SETTINGS" },
+            { UI = AliasMap.Title, Text = "TrnDravix SETTINGS" },
 
             {
                 Key = "ModMenu_Aimbot",
@@ -1016,20 +1010,90 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- ===== END WALLHACK SECTION =====
-            -- ===== VEHICLE ESP =====
+            -- ===== GLOW SECTION =====
+            { UI = AliasMap.Title, Text = "--- GLOW ---" },
             {
-                Key = "VehicleESP",
+                Key = "WH_GlowEnabled",
                 UI = AliasMap.TitleSwitcher,
-                Text = "VEHICLE ESP",
-                GetFunc = function() return _G.MOD_VehicleESP end,
+                Text = "Glow ON/OFF",
+                GetFunc = function() return _G.ESPConfig.GlowEnabled end,
                 SetFunc = function(_, value)
-                    _G.MOD_VehicleESP = value
+                    _G.ESPConfig.GlowEnabled = value
+                    print("[MOD] GLOW: " .. (value and "ON ✓" or "OFF ✗"))
+                    return true
+                end
+            },
+            {
+                Key = "WH_GlowIntensity",
+                UI = AliasMap.Slider,
+                Text = "Glow Intensity",
+                Min = 1,
+                Max = 10,
+                Step = 0.5,
+                IsPercent = false,
+                GetFunc = function() return _G.ESPConfig.GlowIntensity or 5 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.GlowIntensity = value
+                    return true
+                end
+            },
+            -- ===== END GLOW SECTION =====
+            -- ===== END WALLHACK SECTION =====
+            -- ===== VEHICLE ESP SECTION =====
+            { UI = AliasMap.Title, Text = "--- VEHICLE ESP ---" },
+            {
+                Key = "VehicleESP_Enabled",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Vehicle ESP",
+                GetFunc = function() return _G.Mod_VehicleESP_Enabled end,
+                SetFunc = function(_, value)
+                    _G.Mod_VehicleESP_Enabled = value
+                    if value then
+                        _G.StartVehicleESPModule()
+                    else
+                        _G.StopVehicleESPModule()
+                    end
                     print("[MOD] VEHICLE ESP: " .. (value and "ON ✓" or "OFF ✗"))
                     return true
                 end
             },
-            -- ===== END VEHICLE ESP =====
+            {
+                Key = "VehicleESP_Distance",
+                UI = AliasMap.Slider,
+                Text = "Max Distance (m)",
+                Min = 100,
+                Max = 500,
+                Step = 10,
+                IsPercent = false,
+                GetFunc = function() return _G.VehicleESPConfig.MaxDistance or 300 end,
+                SetFunc = function(_, value)
+                    _G.VehicleESPConfig.MaxDistance = value
+                    return true
+                end
+            },
+            {
+                Key = "VehicleESP_Color",
+                UI = AliasMap.Switcher,
+                Text = "Label Color",
+                SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
+                SwitcherValue = {1,2,3,4,5,6,7},
+                GetFunc = function() return _G.VehicleESPConfig.ColorIndex or 4 end,
+                SetFunc = function(_, value)
+                    _G.VehicleESPConfig.ColorIndex = value
+                    return true
+                end
+            },
+            {
+                Key = "VehicleESP_ShowName",
+                UI = AliasMap.TitleSwitcher,
+                Text = "Show Vehicle Name",
+                GetFunc = function() return _G.VehicleESPConfig.ShowName end,
+                SetFunc = function(_, value)
+                    _G.VehicleESPConfig.ShowName = value
+                    return true
+                end
+            },
+            -- ===== END VEHICLE ESP SECTION =====
             {
                 Key = "FPS165",
                 UI = AliasMap.Switcher,
@@ -1078,7 +1142,7 @@ _G.InitModMenuTab = function()
 
         SettingPageDefine.ModMenu = {
             Key = "ModMenu",
-            loc = "ADITYA_ORG MENU",
+            loc = "TrnDravix MENU",
             UIKey = "Setting_Page_Privacy",
             Category = {
                 {
@@ -1122,6 +1186,202 @@ _G.InitModMenuTab = function()
 end
 
 _G.InitModMenuTab()
+
+-- ============================================================
+-- ==================== VEHICLE ESP MODULE ====================
+-- ============================================================
+
+_G._VehicleESPTimer = nil
+_G._VehicleCached = {}
+_G._VehicleLastRefresh = 0
+
+local function GetColorFromIndexVehicle(idx)
+    local colors = {
+        {R=255,G=0,B=0,A=255},     -- 1 Red
+        {R=255,G=255,B=255,A=255}, -- 2 White
+        {R=255,G=255,B=0,A=255},   -- 3 Yellow
+        {R=0,G=255,B=0,A=255},     -- 4 Green
+        {R=0,G=255,B=255,A=255},   -- 5 Cyan
+        {R=0,G=0,B=255,A=255},     -- 6 Blue
+        {R=255,G=0,B=255,A=255},   -- 7 Purple
+    }
+    return colors[idx] or colors[4]
+end
+
+local function VehicleESPTick()
+    pcall(function()
+        if not _G.Mod_VehicleESP_Enabled then return end
+        if not _G.CheatsEnabled then return end
+        
+        local GameplayData = require("GameLua.GameCore.Data.GameplayData")
+        local localPawn = GameplayData.GetPlayerCharacter()
+        if not slua.isValid(localPawn) then return end
+
+        local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+        if not slua.isValid(pc) then return end
+        local HUD = pc:GetHUD()
+        if not slua.isValid(HUD) then return end
+
+        local myPos = localPawn:K2_GetActorLocation()
+        if not myPos then return end
+
+        local now = os.clock()
+        if now - _G._VehicleLastRefresh > 1.0 then
+            _G._VehicleLastRefresh = now
+            pcall(function()
+                local allVehicles = Game:GetAllVehicles()
+                if allVehicles then
+                    _G._VehicleCached = allVehicles
+                else
+                    local world = slua.getWorld()
+                    if world then
+                        local UGameplayStatics = import("GameplayStatics")
+                        if UGameplayStatics then
+                            local VehicleClass = import("Vehicle")
+                            if VehicleClass then
+                                _G._VehicleCached = UGameplayStatics.GetAllActorsOfClass(world, VehicleClass, {})
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+
+        local maxDist = _G.VehicleESPConfig.MaxDistance or 300
+        local maxDistSq = maxDist * maxDist * 10000  -- convert to cm^2
+        local colorTable = GetColorFromIndexVehicle(_G.VehicleESPConfig.ColorIndex or 4)
+        local showName = _G.VehicleESPConfig.ShowName
+        local labelSize = _G.VehicleESPConfig.LabelSize or 1.5
+
+        for _, vehicle in pairs(_G._VehicleCached) do
+            if slua.isValid(vehicle) then
+                local vPos = vehicle:K2_GetActorLocation()
+                if vPos then
+                    local dx = vPos.X - myPos.X
+                    local dy = vPos.Y - myPos.Y
+                    local dz = vPos.Z - myPos.Z
+                    local distSq = dx*dx + dy*dy + dz*dz
+
+                    if distSq < maxDistSq then
+                        local distM = math.floor(math.sqrt(distSq) / 100)
+                        
+                        local vehicleName = "VEHICLE"
+                        pcall(function()
+                            if vehicle.GetName then
+                                local name = vehicle:GetName()
+                                if name and name ~= "" then
+                                    vehicleName = name:gsub("_C$", ""):gsub("_", " ")
+                                end
+                            end
+                        end)
+                        
+                        local label
+                        if showName then
+                            label = string.format("%s [%dm]", vehicleName, distM)
+                        else
+                            label = string.format("🚗 [%dm]", distM)
+                        end
+                        
+                        local offset = { X = 0, Y = 0, Z = 200 }
+                        local color = { 
+                            R = colorTable.R, 
+                            G = colorTable.G, 
+                            B = colorTable.B, 
+                            A = 255 
+                        }
+
+                        HUD:AddDebugText(
+                            label,
+                            vehicle,
+                            labelSize,
+                            offset,
+                            offset,
+                            color,
+                            true,
+                            false,
+                            true,
+                            nil,
+                            1.0,
+                            true
+                        )
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- ============================================================
+-- START / STOP FUNCTIONS
+-- ============================================================
+
+function _G.StartVehicleESPModule()
+    if _G._VehicleESPTimer then
+        pcall(function()
+            if _G.Game then _G.Game:RemoveGameTimer(_G._VehicleESPTimer) end
+        end)
+        _G._VehicleESPTimer = nil
+    end
+
+    if not _G.Mod_VehicleESP_Enabled then return end
+
+    if _G.Game and _G.Game.AddGameTimer then
+        _G._VehicleESPTimer = _G.Game:AddGameTimer(0.5, true, VehicleESPTick)
+        print("[VEHICLEESP] ✅ Active (Game timer)")
+        return true
+    end
+
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if slua.isValid(pc) and pc.AddGameTimer then
+        _G._VehicleESPTimer = pc:AddGameTimer(0.5, true, VehicleESPTick)
+        print("[VEHICLEESP] ✅ Active (PC timer)")
+        return true
+    end
+
+    print("[VEHICLEESP] ❌ Could not start timer")
+    return false
+end
+
+function _G.StopVehicleESPModule()
+    if _G._VehicleESPTimer then
+        pcall(function()
+            if _G.Game then _G.Game:RemoveGameTimer(_G._VehicleESPTimer) end
+        end)
+        _G._VehicleESPTimer = nil
+    end
+    _G._VehicleCached = {}
+    _G._VehicleLastRefresh = 0
+    print("[VEHICLEESP] 🛑 Stopped")
+end
+
+-- ============================================================
+-- AUTO-START IF ENABLED
+-- ============================================================
+
+pcall(function()
+    if _G.Mod_VehicleESP_Enabled then
+        _G.StartVehicleESPModule()
+    end
+end)
+
+-- ============================================================
+-- CLEANUP ON RELOAD
+-- ============================================================
+
+local function VehicleESPCleanup()
+    _G.StopVehicleESPModule()
+end
+
+-- Hook into existing cleanup if available
+if _G.ChamsCleanup then
+    local oldCleanup = _G.ChamsCleanup
+    _G.ChamsCleanup = function()
+        VehicleESPCleanup()
+        oldCleanup()
+    end
+end
+
+print("[VEHICLEESP] 🚀 Module loaded successfully!")
 
 -- ============================================================
 -- END OF SCRIPT
