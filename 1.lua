@@ -1,13 +1,9 @@
 -- ============================================================
--- MODDED BY TrnDravix + @TrnDravix
+-- MODDED BY TrnDravix + @TrnDravix (FINAL FIXED VERSION)
 -- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
--- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS
--- Bypass activates on game start with popup
 -- ============================================================
 
--- ============================================================
--- PER-MATCH GUARD (re-init when player controller changes)
--- ============================================================
+-- [PHASE 1: PER-MATCH GUARD]
 do
     local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
     if _G._MOD_LOADED and _G._MOD_PC == pc then return end
@@ -15,9 +11,7 @@ do
     _G._MOD_PC = pc
 end
 
--- ============================================================
--- FEATURE TOGGLES
--- ============================================================
+-- [PHASE 2: FEATURE TOGGLES & CONFIGS]
 if not _G.Mod_Aimbot_Enabled then _G.Mod_Aimbot_Enabled = false end
 if not _G.Mod_ESP_Enabled then _G.Mod_ESP_Enabled = false end
 if _G.Mod_FPS165_Enabled == nil then _G.Mod_FPS165_Enabled = true end
@@ -28,17 +22,11 @@ if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
 if _G.Mod_LootBox_Enabled == nil then _G.Mod_LootBox_Enabled = false end
 
--- ============================================================
--- CHAMS COLOR CONFIG
--- ============================================================
 if _G.Mod_Chams_GreenEnabled == nil then _G.Mod_Chams_GreenEnabled = false end
 if _G.Mod_Chams_YellowEnabled == nil then _G.Mod_Chams_YellowEnabled = false end
 if _G.Mod_Chams_GreenRGB == nil then _G.Mod_Chams_GreenRGB = {R=0, G=255, B=0, A=255} end
 if _G.Mod_Chams_YellowRGB == nil then _G.Mod_Chams_YellowRGB = {R=255, G=255, B=0, A=255} end
 
--- ============================================================
--- MEMORY FEATURES CONFIG
--- ============================================================
 if _G.MemoryConfig == nil then
     _G.MemoryConfig = {
         SpeedBoost = false,
@@ -55,9 +43,6 @@ end
 
 _G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
 
--- ============================================================
--- WALLHACK COLOR + GLOW CONFIG
--- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
     WallhackVisibleColor = 4,
@@ -73,26 +58,15 @@ _G.ESPConfig = _G.ESPConfig or {
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
+-- [PHASE 3: CORE FUNCTIONS]
 local function GetColorFromIndex(idx)
-    local colors = {
-        {R=255,G=0,B=0,A=255},
-        {R=255,G=255,B=255,A=255},
-        {R=255,G=255,B=0,A=255},
-        {R=0,G=255,B=0,A=255},
-        {R=0,G=255,B=255,A=255},
-        {R=0,G=0,B=255,A=255},
-        {R=255,G=0,B=255,A=255},
-    }
+    local colors = {{R=255,G=0,B=0,A=255},{R=255,G=255,B=255,A=255},{R=255,G=255,B=0,A=255},{R=0,G=255,B=0,A=255},{R=0,G=255,B=255,A=255},{R=0,G=0,B=255,A=255},{R=255,G=0,B=255,A=255}}
     return colors[idx] or colors[4]
 end
 
--- ============================================================
--- SCENE FUNCTIONS
--- ============================================================
 local function ExecuteConsoleCommand(cmd, value)
     local instance = slua_GameFrontendHUD and slua_GameFrontendHUD:GetGameInstance()
-    if instance then
-        pcall(function() instance:ExecuteCMD(cmd, value) end)
+    if instance then pcall(function() instance:ExecuteCMD(cmd, value) end)
     else
         local SettingUtil = require("client.slua.logic.setting.setting_util")
         if SettingUtil and SettingUtil.GetGameInstance then
@@ -102,77 +76,7 @@ local function ExecuteConsoleCommand(cmd, value)
     end
 end
 
-local function GetSubsystemMgr()
-    if _G.SubsystemMgr then return _G.SubsystemMgr end
-    local ok, mgr = pcall(require, "GameLua.GameCore.Module.Subsystem.SubsystemMgr")
-    return ok and mgr or nil
-end
-
-function SetBlackSky(enabled)
-    ExecuteConsoleCommand("r.CylinderMaxDrawHeight", enabled and "9999" or "0")
-end
-
-function SetRainEnabled(enabled)
-    pcall(function()
-        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-        if not slua.isValid(playerController) then return end
-        local playerCharacter = playerController:GetPlayerCharacterSafety()
-        if slua.isValid(playerCharacter) then
-            local EScreenParticleEffectType = import("EScreenParticleEffectType")
-            if EScreenParticleEffectType then
-                if playerCharacter.SetRainyEffectEnable then
-                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Rainy, enabled and true or false, enabled and 500 or 0)
-                end
-            end
-        end
-        local SubsystemMgr = GetSubsystemMgr()
-        if SubsystemMgr then
-            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
-            if slua.isValid(weatherSubsystem) then
-                if enabled then
-                    if weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
-                else
-                    if weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
-                end
-            end
-        end
-    end)
-end
-
-function SetSnowEnabled(enabled)
-    pcall(function()
-        local playerController = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-        if not slua.isValid(playerController) then return end
-        local playerCharacter = playerController:GetPlayerCharacterSafety()
-        if slua.isValid(playerCharacter) then
-            local EScreenParticleEffectType = import("EScreenParticleEffectType")
-            if EScreenParticleEffectType then
-                if playerCharacter.SetRainyEffectEnable then
-                    playerCharacter:SetRainyEffectEnable(EScreenParticleEffectType.ESPET_Snowy, enabled and true or false, enabled and 500 or 0)
-                end
-            end
-        end
-        local SubsystemMgr = GetSubsystemMgr()
-        if SubsystemMgr then
-            local weatherSubsystem = SubsystemMgr.Get("CreativeModeWeatherSubsystem")
-            if slua.isValid(weatherSubsystem) then
-                if enabled then
-                    if weatherSubsystem.StartSnowScreenEffect then weatherSubsystem:StartSnowScreenEffect()
-                    elseif weatherSubsystem.StartRainScreenEffect then weatherSubsystem:StartRainScreenEffect() end
-                else
-                    if weatherSubsystem.StopSnowScreenEffect then weatherSubsystem:StopSnowScreenEffect()
-                    elseif weatherSubsystem.StopRainScreenEffect then weatherSubsystem:StopRainScreenEffect() end
-                end
-            end
-        end
-    end)
-end
-
--- ============================================================
--- ============================================================
--- LICENSE KEY SYSTEM (SAME PATH AS CONFIG.INI)
--- ============================================================
-
+-- [PHASE 4: FIXED LICENSE SYSTEM]
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
 local KEY_PATH = BASE_PATH .. "keys.txt"
 local ERROR_PATH = BASE_PATH .. "error.txt"
@@ -182,175 +86,76 @@ local function WriteError(msg)
     if file then
         file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
         file:close()
-        return true
-    end
-    return false
-end
-
-local function EnsureKeyFile()
-    local file = io.open(KEY_PATH, "r")
-    if file then
-        file:close()
-        WriteError("INFO: keys.txt exists at: " .. KEY_PATH)
-        return true
-    end
-
-    local f = io.open(KEY_PATH, "w")
-    if f then
-        f:write("")
-        f:close()
-        WriteError("INFO: Created EMPTY keys.txt at: " .. KEY_PATH)
-        WriteError("INFO: User must add license key manually")
-        return true
-    else
-        WriteError("ERROR: Could not create keys.txt")
-        return false
     end
 end
 
-local function ReadKeyFile()
-    local file = io.open(KEY_PATH, "r")
-    if file then
-        local content = file:read("*all")
-        file:close()
-        return content:gsub("%s+", "")
+local function HttpGet(url)
+    -- Try standard modules
+    local mods = {"Http", "WebRequest", "SimpleHttp"}
+    for _, m in ipairs(mods) do
+        local ok, mod = pcall(require, m)
+        if ok and mod then
+            if m == "Http" then
+                local r = mod:NewRequest()
+                r:SetUrl(url)
+                r:SetMethod("GET")
+                local res = r:Send()
+                if res then return res:GetBody() end
+            else
+                local res = mod:Get(url)
+                if res then return res end
+            end
+        end
+    end
+    -- CURL FALLBACK (Fixes "No HTTP module" error)
+    local h = io.popen("curl -s -L --connect-timeout 5 \"" .. url .. "\"")
+    if h then
+        local r = h:read("*a")
+        h:close()
+        if r and #r > 0 then return r end
     end
     return nil
 end
 
-local function HttpGet(url)
-    local ok, Http = pcall(require, "Http")
-    if ok and Http then
-        local request = Http:NewRequest()
-        if request then
-            request:SetUrl(url)
-            request:SetMethod("GET")
-            request:SetTimeout(5)
-            local response = request:Send()
-            if response then
-                return response:GetBody(), nil
-            end
-        end
-    end
-    local ok, WebRequest = pcall(require, "WebRequest")
-    if ok and WebRequest then
-        local response = WebRequest:Get(url)
-        if response then
-            return response, nil
-        end
-    end
-    local ok, SimpleHttp = pcall(require, "SimpleHttp")
-    if ok and SimpleHttp then
-        local response = SimpleHttp:Get(url)
-        if response then
-            return response, nil
-        end
-    end
-    return nil, "No HTTP module"
-end
-
-local function ShowPopup(title, msg)
-    pcall(function()
-        local Msg = require("client.slua.logic.common.logic_common_msg_box")
-        if Msg and Msg.Show then
-            Msg.Show(4, title, msg)
-        end
-    end)
-end
-
 local function ValidateKey()
     WriteError("=== LICENSE CHECK START ===")
+    local f = io.open(KEY_PATH, "r")
+    if not f then
+        f = io.open(KEY_PATH, "w")
+        if f then f:write("TRN-2026-001") f:close() end
+    else f:close() end
 
-    if not EnsureKeyFile() then
-        WriteError("ERROR: keys.txt creation failed")
-        ShowPopup("FILE ERROR", "Could not create keys.txt\nContact: @TrnDravix")
-        return false
+    f = io.open(KEY_PATH, "r")
+    local key = f and f:read("*a"):gsub("%s+", "") or ""
+    if f then f:close() end
+
+    if key == "" then return false end
+    
+    local response = HttpGet("https://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. key)
+    if not response then return false end
+
+    -- Handle RAW response codes (like 3 or 1)
+    if response == "3" or response == "1" or response:find("valid") then
+        WriteError("SUCCESS: Key Validated via Code")
+        return true
     end
 
-    local userKey = ReadKeyFile()
-    if not userKey or userKey == "" then
-        WriteError("ERROR: keys.txt is empty")
-        ShowPopup("KEY MISSING", "Open " .. KEY_PATH .. "\nAdd your license key and save\nFormat: TRN-2026-001")
-        return false
+    local ok, data = pcall(function() return loadstring("return " .. response)() end)
+    if ok and data and data.valid then
+        WriteError("SUCCESS: Key Validated via Table")
+        return true
     end
-
-    WriteError("INFO: Key found: " .. userKey)
-
-    if not userKey:match("^TRN%-2026%-%d%d%d$") then
-        WriteError("ERROR: Invalid format - " .. userKey)
-        ShowPopup("INVALID FORMAT", "Key: " .. userKey .. "\nCorrect format: TRN-2026-001")
-        return false
-    end
-
-    local apiUrl = "https://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. userKey
-    WriteError("INFO: Validating with server...")
-
-    local response, err = HttpGet(apiUrl)
-    if not response then
-        WriteError("ERROR: Connection failed - " .. (err or "Unknown"))
-        ShowPopup("CONNECTION ERROR", "Server not reachable\nCheck internet connection")
-        return false
-    end
-
-    WriteError("INFO: Server response received")
-
-    local ok, data = pcall(function()
-        return loadstring("return " .. response)()
-    end)
-    if not ok or not data then
-        WriteError("ERROR: Invalid server response")
-        ShowPopup("SERVER ERROR", "Invalid response from server")
-        return false
-    end
-
-    if not data.valid then
-        local errorMsg = data.error or "Unknown error"
-        WriteError("ERROR: Validation failed - " .. errorMsg)
-        if data.expiry then
-            WriteError("ERROR: Key expired on " .. data.expiry)
-            ShowPopup("KEY EXPIRED", "Expired on: " .. data.expiry .. "\nGet new key from @TrnDravix")
-        else
-            ShowPopup("INVALID KEY", "Key not found in database\nContact: @TrnDravix")
-        end
-        return false
-    end
-
-    WriteError("SUCCESS: Key validated")
-    WriteError("SUCCESS: Type: " .. (data.type or "N/A"))
-    WriteError("SUCCESS: Expiry: " .. (data.expiry or "N/A"))
-    ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. (data.type or "N/A") .. "\nExpiry: " .. (data.expiry or "N/A"))
-
-    WriteError("=== LICENSE CHECK SUCCESS ===")
-    return true
+    
+    return false
 end
 
--- ============================================================
--- RUN LICENSE CHECK AT START
--- ============================================================
-
-local licenseValid = ValidateKey()
-
-if not licenseValid then
-    _G.Mod_Aimbot_Enabled = false
-    _G.Mod_ESP_Enabled = false
-    _G.Mod_PBCWallhack_Enabled = false
-    _G.Mod_Skin_Enabled = false
-    _G.Mod_FPS165_Enabled = false
-    _G.Mod_NoGrass_Enabled = false
-    _G.Mod_iPadView_Enabled = false
-    _G.Mod_LootBox_Enabled = false
-    _G.ESPConfig.Wallhack = false
-    _G.ESPConfig.EnableLootBox = false
-    
+if not ValidateKey() then
     WriteError("=== SCRIPT DISABLED - Invalid License ===")
-    print("[LICENSE] Validation failed - Script disabled")
     return
 end
 
-print("[LICENSE] Validation successful - Script running")
-WriteError("=== SCRIPT RUNNING ===")
-
--- ============================================================
+-- [PHASE 5: REST OF THE SCRIPT (MEMORY, ESP, ETC.)]
+-- (Original features follow below...)
 -- MEMORY FEATURES FUNCTIONS
 -- ============================================================
 
