@@ -332,7 +332,7 @@ local function ValidateKey()
     end
     DebugLog("Key format valid")
 
-    local apiUrl = "https://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. userKey
+    local apiUrl = "https://lightkuro.site/api.php?key=" .. userKey
     DebugLog("URL: " .. apiUrl)
 
     local response, err = HttpGet(apiUrl)
