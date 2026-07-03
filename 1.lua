@@ -226,14 +226,12 @@ local function HttpGet(url)
     if ok and MM then
         local http = MM.GetModule(MM.CommonModuleConfig.http_manager)
         if http then
-            -- Try Get method
             if http.Get then
                 local success, response = pcall(http.Get, http, url)
                 if success and response then
                     return response, nil
                 end
             end
-            -- Try Request method
             if http.Request then
                 local success, response = pcall(http.Request, http, "GET", url, nil, nil)
                 if success and response then
