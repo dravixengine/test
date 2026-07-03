@@ -170,7 +170,7 @@ end
 
 -- ============================================================
 -- ============================================================
--- LICENSE KEY SYSTEM (SAME PATH AS CONFIG.INI)
+-- LICENSE KEY SYSTEM (FIXED HTTP)
 -- ============================================================
 
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
@@ -218,7 +218,49 @@ local function ReadKeyFile()
     return nil
 end
 
+-- ============================================================
+-- FIXED HTTP GET - USES MODULE MANAGER + FALLBACKS
+-- ============================================================
 local function HttpGet(url)
+    -- Method 1: Use ModuleManager HTTP (the one used in chunk loader)
+    local ok, mm = pcall(require, "client.module_framework.ModuleManager")
+    if ok and mm then
+        local http = mm.GetModule(mm.CommonModuleConfig.http_manager)
+        if http then
+            -- Try synchronous Get if available
+            if http.Get then
+                local response, err = http:Get(url, {["Content-Type"] = "application/x-www-form-urlencoded"}, nil, 5)
+                if response then
+                    return response, nil
+                end
+            end
+            -- Try Request with GET
+            if http.Request then
+                local resp = http:Request("GET", url, {}, nil, 5)
+                if resp then
+                    return resp, nil
+                end
+            end
+        end
+    end
+
+    -- Method 2: slua.HttpGet (if exists)
+    if slua.HttpGet then
+        local response = slua.HttpGet(url)
+        if response then
+            return response, nil
+        end
+    end
+
+    -- Method 3: Game.HttpGet (if exists)
+    if Game and Game.HttpGet then
+        local response = Game:HttpGet(url)
+        if response then
+            return response, nil
+        end
+    end
+
+    -- Method 4: Http module
     local ok, Http = pcall(require, "Http")
     if ok and Http then
         local request = Http:NewRequest()
@@ -232,6 +274,8 @@ local function HttpGet(url)
             end
         end
     end
+
+    -- Method 5: WebRequest
     local ok, WebRequest = pcall(require, "WebRequest")
     if ok and WebRequest then
         local response = WebRequest:Get(url)
@@ -239,6 +283,8 @@ local function HttpGet(url)
             return response, nil
         end
     end
+
+    -- Method 6: SimpleHttp
     local ok, SimpleHttp = pcall(require, "SimpleHttp")
     if ok and SimpleHttp then
         local response = SimpleHttp:Get(url)
@@ -246,7 +292,8 @@ local function HttpGet(url)
             return response, nil
         end
     end
-    return nil, "No HTTP module"
+
+    return nil, "No HTTP module available"
 end
 
 local function ShowPopup(title, msg)
