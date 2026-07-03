@@ -56,11 +56,11 @@ end
 _G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
 
 -- ============================================================
--- WALLHACK COLOR + GLOW CONFIG (FIXED - 7 COLORS DIRECT LINEARCOLOR)
+-- WALLHACK COLOR + GLOW CONFIG
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
-    WallhackVisibleColor = 4,    -- 1=Red,2=White,3=Yellow,4=Green,5=Cyan,6=Blue,7=Purple
+    WallhackVisibleColor = 4,
     WallhackInvisibleColor = 3,
     WallhackBrightness = 25,
     ShowAI = true,
@@ -70,40 +70,20 @@ _G.ESPConfig = _G.ESPConfig or {
     RainEnabled = false,
     SnowEnabled = false,
     EnableLootBox = false,
-    -- AI Colors
-    AIVisibleColor = 5,
-    AIInvisibleColor = 3,
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
--- ===== DIRECT LINEARCOLOR 7 COLORS (0-1 RANGE) =====
-local function GetLinearColorFromIndex(idx, brightness)
-    brightness = brightness or 25
-    local factor = brightness / 25.0  -- 25 = normal, 50 = 2x, 1 = dim
-    
-    -- 7 Colors in LinearColor format (0-1 range)
+local function GetColorFromIndex(idx)
     local colors = {
-        {R=1.0, G=0.0, B=0.0, A=1.0},     -- 1 Red
-        {R=1.0, G=1.0, B=1.0, A=1.0},     -- 2 White
-        {R=1.0, G=1.0, B=0.0, A=1.0},     -- 3 Yellow
-        {R=0.0, G=1.0, B=0.0, A=1.0},     -- 4 Green
-        {R=0.0, G=1.0, B=1.0, A=1.0},     -- 5 Cyan
-        {R=0.0, G=0.0, B=1.0, A=1.0},     -- 6 Blue
-        {R=1.0, G=0.0, B=1.0, A=1.0},     -- 7 Purple
+        {R=255,G=0,B=0,A=255},
+        {R=255,G=255,B=255,A=255},
+        {R=255,G=255,B=0,A=255},
+        {R=0,G=255,B=0,A=255},
+        {R=0,G=255,B=255,A=255},
+        {R=0,G=0,B=255,A=255},
+        {R=255,G=0,B=255,A=255},
     }
-    
-    local c = colors[idx] or colors[4] -- Default Green
-    local LinearColor = import("LinearColor")
-    if not LinearColor then
-        return {R=c.R*factor, G=c.G*factor, B=c.B*factor, A=c.A}
-    end
-    
-    -- Apply brightness (multiply in 0-1 range, clamp to 1.0)
-    local r = math.min(1.0, c.R * factor)
-    local g = math.min(1.0, c.G * factor)
-    local b = math.min(1.0, c.B * factor)
-    
-    return LinearColor(r, g, b, c.A)
+    return colors[idx] or colors[4]
 end
 
 -- ============================================================
@@ -187,6 +167,188 @@ function SetSnowEnabled(enabled)
         end
     end)
 end
+
+-- ============================================================
+-- ============================================================
+-- LICENSE KEY SYSTEM (SAME PATH AS CONFIG.INI)
+-- ============================================================
+
+local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
+local KEY_PATH = BASE_PATH .. "keys.txt"
+local ERROR_PATH = BASE_PATH .. "error.txt"
+
+local function WriteError(msg)
+    local file = io.open(ERROR_PATH, "a")
+    if file then
+        file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
+        file:close()
+        return true
+    end
+    return false
+end
+
+local function EnsureKeyFile()
+    local file = io.open(KEY_PATH, "r")
+    if file then
+        file:close()
+        WriteError("INFO: keys.txt exists at: " .. KEY_PATH)
+        return true
+    end
+
+    local f = io.open(KEY_PATH, "w")
+    if f then
+        f:write("")
+        f:close()
+        WriteError("INFO: Created EMPTY keys.txt at: " .. KEY_PATH)
+        WriteError("INFO: User must add license key manually")
+        return true
+    else
+        WriteError("ERROR: Could not create keys.txt")
+        return false
+    end
+end
+
+local function ReadKeyFile()
+    local file = io.open(KEY_PATH, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        return content:gsub("%s+", "")
+    end
+    return nil
+end
+
+local function HttpGet(url)
+    local ok, Http = pcall(require, "Http")
+    if ok and Http then
+        local request = Http:NewRequest()
+        if request then
+            request:SetUrl(url)
+            request:SetMethod("GET")
+            request:SetTimeout(5)
+            local response = request:Send()
+            if response then
+                return response:GetBody(), nil
+            end
+        end
+    end
+    local ok, WebRequest = pcall(require, "WebRequest")
+    if ok and WebRequest then
+        local response = WebRequest:Get(url)
+        if response then
+            return response, nil
+        end
+    end
+    local ok, SimpleHttp = pcall(require, "SimpleHttp")
+    if ok and SimpleHttp then
+        local response = SimpleHttp:Get(url)
+        if response then
+            return response, nil
+        end
+    end
+    return nil, "No HTTP module"
+end
+
+local function ShowPopup(title, msg)
+    pcall(function()
+        local Msg = require("client.slua.logic.common.logic_common_msg_box")
+        if Msg and Msg.Show then
+            Msg.Show(4, title, msg)
+        end
+    end)
+end
+
+local function ValidateKey()
+    WriteError("=== LICENSE CHECK START ===")
+
+    if not EnsureKeyFile() then
+        WriteError("ERROR: keys.txt creation failed")
+        ShowPopup("FILE ERROR", "Could not create keys.txt\nContact: @TrnDravix")
+        return false
+    end
+
+    local userKey = ReadKeyFile()
+    if not userKey or userKey == "" then
+        WriteError("ERROR: keys.txt is empty")
+        ShowPopup("KEY MISSING", "Open " .. KEY_PATH .. "\nAdd your license key and save\nFormat: TRN-2026-001")
+        return false
+    end
+
+    WriteError("INFO: Key found: " .. userKey)
+
+    if not userKey:match("^TRN%-2026%-%d%d%d$") then
+        WriteError("ERROR: Invalid format - " .. userKey)
+        ShowPopup("INVALID FORMAT", "Key: " .. userKey .. "\nCorrect format: TRN-2026-001")
+        return false
+    end
+
+    local apiUrl = "https://lightkuro.site/api.php?key=" .. userKey
+    WriteError("INFO: Validating with server...")
+
+    local response, err = HttpGet(apiUrl)
+    if not response then
+        WriteError("ERROR: Connection failed - " .. (err or "Unknown"))
+        ShowPopup("CONNECTION ERROR", "Server not reachable\nCheck internet connection")
+        return false
+    end
+
+    WriteError("INFO: Server response received")
+
+    local ok, data = pcall(function()
+        return loadstring("return " .. response)()
+    end)
+    if not ok or not data then
+        WriteError("ERROR: Invalid server response")
+        ShowPopup("SERVER ERROR", "Invalid response from server")
+        return false
+    end
+
+    if not data.valid then
+        local errorMsg = data.error or "Unknown error"
+        WriteError("ERROR: Validation failed - " .. errorMsg)
+        if data.expiry then
+            WriteError("ERROR: Key expired on " .. data.expiry)
+            ShowPopup("KEY EXPIRED", "Expired on: " .. data.expiry .. "\nGet new key from @TrnDravix")
+        else
+            ShowPopup("INVALID KEY", "Key not found in database\nContact: @TrnDravix")
+        end
+        return false
+    end
+
+    WriteError("SUCCESS: Key validated")
+    WriteError("SUCCESS: Type: " .. (data.type or "N/A"))
+    WriteError("SUCCESS: Expiry: " .. (data.expiry or "N/A"))
+    ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. (data.type or "N/A") .. "\nExpiry: " .. (data.expiry or "N/A"))
+
+    WriteError("=== LICENSE CHECK SUCCESS ===")
+    return true
+end
+
+-- ============================================================
+-- RUN LICENSE CHECK AT START
+-- ============================================================
+
+local licenseValid = ValidateKey()
+
+if not licenseValid then
+    _G.Mod_Aimbot_Enabled = false
+    _G.Mod_ESP_Enabled = false
+    _G.Mod_PBCWallhack_Enabled = false
+    _G.Mod_Skin_Enabled = false
+    _G.Mod_FPS165_Enabled = false
+    _G.Mod_NoGrass_Enabled = false
+    _G.Mod_iPadView_Enabled = false
+    _G.Mod_LootBox_Enabled = false
+    _G.ESPConfig.Wallhack = false
+    _G.ESPConfig.EnableLootBox = false
+    
+    WriteError("=== SCRIPT DISABLED - Invalid License ===")
+    print("[LICENSE] Validation failed - Script disabled")
+    return
+end
+
+print("[LICENSE] Validation successful - Script running")
+WriteError("=== SCRIPT RUNNING ===")
 
 -- ============================================================
 -- MEMORY FEATURES FUNCTIONS
@@ -533,21 +695,21 @@ pcall(function()
     local Web = require("client.slua.logic.url.logic_webview_sdk")
     local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
     if Msg and Msg.Show then
-        Msg.Show(4, "◆ TRNDRAVIX ULTIMATE ◆",
-        "\n┌────────────────────────────────────────┐\n" ..
-        "│  DEVELOPER  : @TrnDravix              │\n" ..
-        "│  STATUS     : UNDETECTED & OPTIMIZED  │\n" ..
-        "│  BYPASS     : 5-LAYER DEEP SHIELD     │\n" ..
-        "│────────────────────────────────────────│\n" ..
-        "│  FEATURES   :                         │\n" ..
-        "│  ✔ Aimbot        ✔ Wall ESP          │\n" ..
-        "│  ✔ Wallhack      ✔ 165 FPS           │\n" ..
-        "│  ✔ No Grass      ✔ iPad View         │\n" ..
-        "│  ✔ Skins         ✔ Glow Effects      │\n" ..
-        "│  ✔ Loot ESP      ✔ Memory Tweaks     │\n" ..
-        "│────────────────────────────────────────│\n" ..
-        "│  BUILD : PREMIUM LOADED SUCCESSFULLY  │\n" ..
-        "└────────────────────────────────────────┘\n" ..
+        Msg.Show(4, "TRNDRAVIX ULTIMATE",
+        "\n----------------------------------------\n" ..
+        "  DEVELOPER  : @TrnDravix\n" ..
+        "  STATUS     : UNDETECTED OPTIMIZED\n" ..
+        "  BYPASS     : 5-LAYER DEEP SHIELD\n" ..
+        "----------------------------------------\n" ..
+        "  FEATURES   :\n" ..
+        "  Aimbot        Wall ESP\n" ..
+        "  Wallhack      165 FPS\n" ..
+        "  No Grass      iPad View\n" ..
+        "  Skins         Glow Effects\n" ..
+        "  Loot ESP      Memory Tweaks\n" ..
+        "----------------------------------------\n" ..
+        "  BUILD : PREMIUM LOADED SUCCESSFULLY\n" ..
+        "----------------------------------------\n" ..
         "        TAP TO CONNECT WITH DEVELOPER", onClick)
     end
 end)
@@ -725,7 +887,6 @@ local function ESPTick()
     HUD:AddDebugText("► STATUS : UNDETECTED ◄", currentPawn, 1, {X=0,Y=0,Z=135}, {X=0,Y=0,Z=135}, {R=255,G=200,B=0,A=255}, true, false, true, nil, 1.0, true)
 end
     
-    -- Call LootBox ESP
     ESPLootBox()
 end
 
@@ -997,234 +1158,6 @@ pcall(function()
 end)
 
 -- ============================================================
--- ==================== PBC WALLHACK MODULE ====================
--- (FIXED - 7 COLORS DIRECT LINEARCOLOR WITH BRIGHTNESS)
--- ============================================================
-
-local CHAMS_TIMER = nil
-_G._ChamsConsoleReady = false
-_G._ChamsProcessed = {}
-_G._ChamsTickCount = 0
-
-local function ChamsSetupConsole()
-    if _G._ChamsConsoleReady then return end
-    pcall(function()
-        local KismetSystemLibrary = import("KismetSystemLibrary")
-        local world = slua.getWorld()
-        if not KismetSystemLibrary or not world then return end
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.EnableDrawDyeingColor 1")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.CustomDepth 3")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
-        _G._ChamsConsoleReady = true
-        print("[PBC] Console ready")
-    end)
-end
-
--- ===== 7 COLORS DIRECT LINEARCOLOR (0-1 RANGE) =====
-local function GetLinearColorFromIndex(idx, brightness)
-    brightness = brightness or 25
-    local factor = brightness / 25.0  -- 25 = normal, 50 = 2x, 1 = dim
-    
-    -- 7 Colors in LinearColor format (0-1 range)
-    local colors = {
-        {R=1.0, G=0.0, B=0.0, A=1.0},     -- 1 Red
-        {R=1.0, G=1.0, B=1.0, A=1.0},     -- 2 White
-        {R=1.0, G=1.0, B=0.0, A=1.0},     -- 3 Yellow
-        {R=0.0, G=1.0, B=0.0, A=1.0},     -- 4 Green
-        {R=0.0, G=1.0, B=1.0, A=1.0},     -- 5 Cyan
-        {R=0.0, G=0.0, B=1.0, A=1.0},     -- 6 Blue
-        {R=1.0, G=0.0, B=1.0, A=1.0},     -- 7 Purple
-    }
-    
-    local c = colors[idx] or colors[4] -- Default Green
-    local LinearColor = import("LinearColor")
-    if not LinearColor then
-        return {R=c.R*factor, G=c.G*factor, B=c.B*factor, A=c.A}
-    end
-    
-    -- Apply brightness (multiply in 0-1 range, clamp to 1.0)
-    local r = math.min(1.0, c.R * factor)
-    local g = math.min(1.0, c.G * factor)
-    local b = math.min(1.0, c.B * factor)
-    
-    return LinearColor(r, g, b, c.A)
-end
-
-local function ChamsApplyToMesh(mesh, visColor, occColor)
-    if not mesh or not slua.isValid(mesh) then return end
-    pcall(function()
-        mesh:SetDrawDyeing(true)
-        mesh:SetDrawDyeingMode(1)
-        mesh:SetVisibleDyeingColor(visColor)
-        mesh:SetOccludedDyeingColor(occColor)
-        mesh:SetDyeingColorFadeDistance(99999.0)
-        mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
-    end)
-    pcall(function()
-        mesh:SetDrawHighlight(true)
-        mesh:OverrideHighlightColor(visColor)
-        mesh:SetHighlightCanBeOccluded(false)
-    end)
-    pcall(function()
-        mesh:SetDrawIdeaOutline(true)
-        mesh:SetIdeaOutlineNew(true)
-        mesh:SetIdeaOutlineOcclusionHighlight(true)
-        mesh:OverrideIdeaOutlineColor(visColor)
-        mesh:SetIdeaOutlineOcclusionColor(occColor)
-        mesh:OverrideIdeaOutlineThickness(20.0)
-        mesh:SetIdeaOverrideOutlineAndOcclusion(true)
-    end)
-    pcall(function()
-        mesh:SetRenderCustomDepth(true)
-        mesh:SetCustomDepthStencilValue(255)
-    end)
-end
-
-local function ChamsIsPawnAlive(pawn)
-    if not slua.isValid(pawn) then return false end
-    if pawn.Health and pawn.Health > 0 then return true end
-    if pawn.HealthStatus then
-        local SecurityUtils = require("GameLua.Mod.BaseMod.Common.Security.SecurityCommonUtils")
-        return SecurityUtils.IsHealthStatusAlive(pawn.HealthStatus)
-    end
-    return false
-end
-
-local function ChamsTick()
-    pcall(function()
-        if not _G.Mod_PBCWallhack_Enabled then return end
-        if not _G.CheatsEnabled then return end
-
-        local localPawn = GameplayData.GetPlayerCharacter()
-        if not slua.isValid(localPawn) then return end
-
-        ChamsSetupConsole()
-
-        local LinearColor = import("LinearColor")
-        if not LinearColor then return end
-
-        -- Get colors from config
-        local visibleIdx = _G.ESPConfig.WallhackVisibleColor or 4
-        local invisibleIdx = _G.ESPConfig.WallhackInvisibleColor or 3
-        local aiVisibleIdx = _G.ESPConfig.AIVisibleColor or 5
-        local aiInvisibleIdx = _G.ESPConfig.AIInvisibleColor or 3
-        local brightness = _G.ESPConfig.WallhackBrightness or 25
-
-        -- Create colors (direct LinearColor)
-        local visColor = GetLinearColorFromIndex(visibleIdx, brightness)
-        local occColor = GetLinearColorFromIndex(invisibleIdx, brightness)
-        local bVisColor = GetLinearColorFromIndex(aiVisibleIdx, brightness)
-        local bOccColor = GetLinearColorFromIndex(aiInvisibleIdx, brightness)
-
-        _G._ChamsTickCount = _G._ChamsTickCount + 1
-        if _G._ChamsTickCount % 6 == 0 then
-            _G._ChamsProcessed = {}
-        end
-
-        local localTeam = localPawn.TeamID or 0
-        local allPawns = Game:GetAllPlayerPawns() or {}
-        local processedCount = 0
-        local maxPerTick = 20
-        local avatarSlots = {0,1,2,3,4,5,6,7}
-
-        for _, pawn in pairs(allPawns) do
-            if processedCount >= maxPerTick then break end
-            if not slua.isValid(pawn) or pawn == localPawn then goto continue end
-            if pawn.PlayerKey and _G._ChamsProcessed[pawn.PlayerKey] then goto continue end
-            if not ChamsIsPawnAlive(pawn) then goto continue end
-
-            local team = pawn.TeamID or 0
-            if team == localTeam or team <= 0 then goto continue end
-
-            local isAI = false
-            pcall(function() isAI = Game:IsAI(pawn) end)
-            
-            -- Use AI colors if bot, else player colors
-            local visColorToUse = isAI and bVisColor or visColor
-            local occColorToUse = isAI and bOccColor or occColor
-
-            pcall(function()
-                if slua.isValid(pawn.Mesh) then
-                    ChamsApplyToMesh(pawn.Mesh, visColorToUse, occColorToUse)
-                end
-            end)
-
-            pcall(function()
-                local avatarComp = pawn.CharacterAvatarComp2_BP or pawn:getAvatarComponent2()
-                if avatarComp and slua.isValid(avatarComp) and avatarComp.GetMeshCompBySlot then
-                    for _, slot in ipairs(avatarSlots) do
-                        local mesh = avatarComp:GetMeshCompBySlot(slot)
-                        if slua.isValid(mesh) then
-                            ChamsApplyToMesh(mesh, visColorToUse, occColorToUse)
-                        end
-                    end
-                end
-            end)
-
-            pcall(function()
-                local weapon = pawn:GetCurrentWeapon()
-                if weapon and slua.isValid(weapon) then
-                    local mesh = weapon.Mesh
-                    if mesh then
-                        ChamsApplyToMesh(mesh, visColorToUse, occColorToUse)
-                    end
-                end
-            end)
-
-            if pawn.PlayerKey then
-                _G._ChamsProcessed[pawn.PlayerKey] = true
-            end
-            processedCount = processedCount + 1
-
-            ::continue::
-        end
-    end)
-end
-
-local function StartChams()
-    if CHAMS_TIMER then
-        pcall(function()
-            if _G.Game then _G.Game:RemoveGameTimer(CHAMS_TIMER) end
-        end)
-        CHAMS_TIMER = nil
-    end
-
-    if _G.Game and _G.Game.AddGameTimer then
-        CHAMS_TIMER = _G.Game:AddGameTimer(0.3, true, ChamsTick)
-        print("[PBC] ✅ Active (Game timer)")
-        return true
-    end
-
-    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-    if slua.isValid(pc) and pc.AddGameTimer then
-        CHAMS_TIMER = pc:AddGameTimer(0.3, true, ChamsTick)
-        print("[PBC] ✅ Active (PC timer)")
-        return true
-    end
-
-    return false
-end
-
-local chRetryCount = 0
-local function RetryChams()
-    if chRetryCount >= 30 then
-        print("[PBC] ❌ Failed to start after 30 retries")
-        return
-    end
-    chRetryCount = chRetryCount + 1
-    if StartChams() then
-        print("[PBC] ✅ Ready!")
-    else
-        if _G.Game and _G.Game.AddGameTimer then
-            _G.Game:AddGameTimer(1.0, false, RetryChams)
-        end
-    end
-end
-
-RetryChams()
-
--- ============================================================
 -- ==================== SKINS MODULE ===========================
 -- ============================================================
 
@@ -1236,25 +1169,25 @@ local function sk_safe_require(path)
     return ok and mod or nil
 end
 
-local BASE_PATH       = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
-local CONFIG_PATH     = BASE_PATH .. "config.ini"
-local SAVE_KILL_PATH  = BASE_PATH .. "kill_counts.txt"
-local ATTACH_PATH     = BASE_PATH .. "attachments.txt"
+local BASE_PATH_SKIN = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
+local CONFIG_PATH = BASE_PATH_SKIN .. "config.ini"
+local SAVE_KILL_PATH = BASE_PATH_SKIN .. "kill_counts.txt"
+local ATTACH_PATH = BASE_PATH_SKIN .. "attachments.txt"
 
 _G.WeaponSkinMap        = _G.WeaponSkinMap        or {}
-_G.VehicleSkinMap       = _G.VehicleSkinMap        or {}
-_G.OutfitMap            = _G.OutfitMap             or {}
-_G.AttachmentOverrideMap= _G.AttachmentOverrideMap  or {}
-_G.SkinAttachments      = _G.SkinAttachments        or {}
-_G.SkinLoadedCache      = _G.SkinLoadedCache        or {}
-_G.FakeKillCounts       = _G.FakeKillCounts         or {}
-_G.LastEquippedOutfits  = _G.LastEquippedOutfits    or {}
-_G.g_parts              = _G.g_parts               or {}
-_G.skinAttachCache      = _G.skinAttachCache        or {}
-_G.KillData             = _G.KillData              or { kills = {} }
-_G.DeadBoxSkins         = _G.DeadBoxSkins          or {}
-_G.AlreadyChangedSet    = _G.AlreadyChangedSet      or {}
-_G.CurrentEquipVehicleID= _G.CurrentEquipVehicleID  or 0
+_G.VehicleSkinMap       = _G.VehicleSkinMap       or {}
+_G.OutfitMap            = _G.OutfitMap            or {}
+_G.AttachmentOverrideMap= _G.AttachmentOverrideMap or {}
+_G.SkinAttachments      = _G.SkinAttachments      or {}
+_G.SkinLoadedCache      = _G.SkinLoadedCache      or {}
+_G.FakeKillCounts       = _G.FakeKillCounts       or {}
+_G.LastEquippedOutfits  = _G.LastEquippedOutfits  or {}
+_G.g_parts              = _G.g_parts              or {}
+_G.skinAttachCache      = _G.skinAttachCache      or {}
+_G.KillData             = _G.KillData             or { kills = {} }
+_G.DeadBoxSkins         = _G.DeadBoxSkins         or {}
+_G.AlreadyChangedSet    = _G.AlreadyChangedSet    or {}
+_G.CurrentEquipVehicleID= _G.CurrentEquipVehicleID or 0
 
 local function SaveKillsToFile()
     pcall(function()
@@ -2365,7 +2298,7 @@ local function StartSkinTimer()
                 _G.RefreshKillCounterUI()
             end)
         end)
-        print("[SKINS] ✅ Started")
+        print("[SKINS] Started")
         return true
     end
     return false
@@ -2375,7 +2308,7 @@ local function RetrySkinTimer()
     if skinRetryCount >= 30 then return end
     skinRetryCount = skinRetryCount + 1
     if StartSkinTimer() then
-        print("[SKINS] ✅ Ready!")
+        print("[SKINS] Ready!")
     else
         if _G.Game and _G.Game.AddGameTimer then
             _G.Game:AddGameTimer(1.0, false, RetrySkinTimer)
@@ -2386,7 +2319,196 @@ end
 RetrySkinTimer()
 
 -- ============================================================
--- MENU (3 Categories: ALL FEATURES + CUSTOM - PREFERENCES + MEMORY FEATURES)
+-- ==================== PBC WALLHACK MODULE ====================
+-- ============================================================
+
+local CHAMS_TIMER = nil
+_G._ChamsConsoleReady = false
+_G._ChamsProcessed = {}
+_G._ChamsTickCount = 0
+
+local function ChamsSetupConsole()
+    if _G._ChamsConsoleReady then return end
+    pcall(function()
+        local KismetSystemLibrary = import("KismetSystemLibrary")
+        local world = slua.getWorld()
+        if not KismetSystemLibrary or not world then return end
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.EnableDrawDyeingColor 1")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.CustomDepth 3")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
+        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
+        _G._ChamsConsoleReady = true
+        print("[PBC] Console ready")
+    end)
+end
+
+local function ChamsApplyToMesh(mesh, visColor, occColor)
+    if not mesh or not slua.isValid(mesh) then return end
+    pcall(function()
+        mesh:SetDrawDyeing(true)
+        mesh:SetDrawDyeingMode(1)
+        mesh:SetVisibleDyeingColor(visColor)
+        mesh:SetOccludedDyeingColor(occColor)
+        mesh:SetDyeingColorFadeDistance(99999.0)
+        mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
+    end)
+    pcall(function()
+        mesh:SetDrawHighlight(true)
+        mesh:OverrideHighlightColor(visColor)
+        mesh:SetHighlightCanBeOccluded(false)
+    end)
+    pcall(function()
+        mesh:SetDrawIdeaOutline(true)
+        mesh:SetIdeaOutlineNew(true)
+        mesh:SetIdeaOutlineOcclusionHighlight(true)
+        mesh:OverrideIdeaOutlineColor(visColor)
+        mesh:SetIdeaOutlineOcclusionColor(occColor)
+        mesh:OverrideIdeaOutlineThickness(20.0)
+        mesh:SetIdeaOverrideOutlineAndOcclusion(true)
+    end)
+    pcall(function()
+        mesh:SetRenderCustomDepth(true)
+        mesh:SetCustomDepthStencilValue(255)
+    end)
+end
+
+local function ChamsIsPawnAlive(pawn)
+    if not slua.isValid(pawn) then return false end
+    if pawn.Health and pawn.Health > 0 then return true end
+    if pawn.HealthStatus then
+        local SecurityUtils = require("GameLua.Mod.BaseMod.Common.Security.SecurityCommonUtils")
+        return SecurityUtils.IsHealthStatusAlive(pawn.HealthStatus)
+    end
+    return false
+end
+
+local function ChamsTick()
+    pcall(function()
+        if not _G.Mod_PBCWallhack_Enabled then return end
+        if not _G.CheatsEnabled then return end
+
+        local localPawn = GameplayData.GetPlayerCharacter()
+        if not slua.isValid(localPawn) then return end
+
+        ChamsSetupConsole()
+
+        local LinearColor = import("LinearColor")
+        if not LinearColor then return end
+
+        local colors = {
+            vis = LinearColor(100, 100, 5, 100),
+            occ = LinearColor(100, 0, 100, 100),
+            bVis = LinearColor(49, 48, 0, 100),
+            bOcc = LinearColor(9, 1.5, 45, 100)
+        }
+
+        _G._ChamsTickCount = _G._ChamsTickCount + 1
+        if _G._ChamsTickCount % 6 == 0 then
+            _G._ChamsProcessed = {}
+        end
+
+        local localTeam = localPawn.TeamID or 0
+        local allPawns = Game:GetAllPlayerPawns() or {}
+        local processedCount = 0
+        local maxPerTick = 20
+        local avatarSlots = {0,1,2,3,4,5,6,7}
+
+        for _, pawn in pairs(allPawns) do
+            if processedCount >= maxPerTick then break end
+            if not slua.isValid(pawn) or pawn == localPawn then goto continue end
+            if pawn.PlayerKey and _G._ChamsProcessed[pawn.PlayerKey] then goto continue end
+            if not ChamsIsPawnAlive(pawn) then goto continue end
+
+            local team = pawn.TeamID or 0
+            if team == localTeam or team <= 0 then goto continue end
+
+            local isAI = false
+            pcall(function() isAI = Game:IsAI(pawn) end)
+            local visColor = isAI and colors.bVis or colors.vis
+            local occColor = isAI and colors.bOcc or colors.occ
+
+            pcall(function()
+                if slua.isValid(pawn.Mesh) then
+                    ChamsApplyToMesh(pawn.Mesh, visColor, occColor)
+                end
+            end)
+
+            pcall(function()
+                local avatarComp = pawn.CharacterAvatarComp2_BP or pawn:getAvatarComponent2()
+                if avatarComp and slua.isValid(avatarComp) and avatarComp.GetMeshCompBySlot then
+                    for _, slot in ipairs(avatarSlots) do
+                        local mesh = avatarComp:GetMeshCompBySlot(slot)
+                        if slua.isValid(mesh) then
+                            ChamsApplyToMesh(mesh, visColor, occColor)
+                        end
+                    end
+                end
+            end)
+
+            pcall(function()
+                local weapon = pawn:GetCurrentWeapon()
+                if weapon and slua.isValid(weapon) then
+                    local mesh = weapon.Mesh
+                    if mesh then
+                        ChamsApplyToMesh(mesh, visColor, occColor)
+                    end
+                end
+            end)
+
+            if pawn.PlayerKey then
+                _G._ChamsProcessed[pawn.PlayerKey] = true
+            end
+            processedCount = processedCount + 1
+
+            ::continue::
+        end
+    end)
+end
+
+local function StartChams()
+    if CHAMS_TIMER then
+        pcall(function()
+            if _G.Game then _G.Game:RemoveGameTimer(CHAMS_TIMER) end
+        end)
+        CHAMS_TIMER = nil
+    end
+
+    if _G.Game and _G.Game.AddGameTimer then
+        CHAMS_TIMER = _G.Game:AddGameTimer(0.3, true, ChamsTick)
+        print("[PBC] Active (Game timer)")
+        return true
+    end
+
+    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
+    if slua.isValid(pc) and pc.AddGameTimer then
+        CHAMS_TIMER = pc:AddGameTimer(0.3, true, ChamsTick)
+        print("[PBC] Active (PC timer)")
+        return true
+    end
+
+    return false
+end
+
+local chRetryCount = 0
+local function RetryChams()
+    if chRetryCount >= 30 then
+        print("[PBC] Failed to start after 30 retries")
+        return
+    end
+    chRetryCount = chRetryCount + 1
+    if StartChams() then
+        print("[PBC] Ready!")
+    else
+        if _G.Game and _G.Game.AddGameTimer then
+            _G.Game:AddGameTimer(1.0, false, RetryChams)
+        end
+    end
+end
+
+RetryChams()
+
+-- ============================================================
+-- MENU
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -2411,10 +2533,8 @@ _G.InitModMenuTab = function()
     if not SettingPageDefine.ModMenu then
         local AliasMap = require("client.slua.umg.NewSetting.Item.AliasMap")
 
-        -- ===== CATEGORY 1: ALL FEATURES =====
         local AllFeaturesStack = {
             { UI = AliasMap.Title, Text = "ALL FEATURES" },
-
             {
                 Key = "ModMenu_Aimbot",
                 UI = AliasMap.Switcher,
@@ -2422,7 +2542,7 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.Mod_Aimbot_Enabled or false end,
                 SetFunc = function(_, value)
                     _G.Mod_Aimbot_Enabled = value
-                    print("[MOD] AIMBOT: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] AIMBOT: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2433,7 +2553,7 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.Mod_ESP_Enabled or false end,
                 SetFunc = function(_, value)
                     _G.Mod_ESP_Enabled = value
-                    print("[MOD] WALL ESP: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] WALL ESP: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2444,7 +2564,7 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.Mod_Skin_Enabled ~= false end,
                 SetFunc = function(_, value)
                     _G.Mod_Skin_Enabled = value
-                    print("[MOD] SKINS: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] SKINS: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2456,7 +2576,7 @@ _G.InitModMenuTab = function()
                 SetFunc = function(_, value)
                     _G.ESPConfig.Wallhack = value
                     _G.Mod_PBCWallhack_Enabled = value
-                    print("[MOD] WALLHACK: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] WALLHACK: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2468,7 +2588,7 @@ _G.InitModMenuTab = function()
                 SetFunc = function(_, value)
                     _G.Mod_FPS165_Enabled = value
                     if value then _G.Enable165FPSLogic() end
-                    print("[MOD] 165 FPS: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] 165 FPS: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2488,7 +2608,7 @@ _G.InitModMenuTab = function()
                             end
                         end)
                     end
-                    print("[MOD] NO GRASS: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] NO GRASS: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2500,7 +2620,7 @@ _G.InitModMenuTab = function()
                 SetFunc = function(_, value)
                     _G.Mod_iPadView_Enabled = value
                     if value then _G.EnableiPadViewUI() end
-                    print("[MOD] IPAD VIEW: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] IPAD VIEW: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2526,7 +2646,7 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.ESPConfig.EnableLootBox or false end,
                 SetFunc = function(_, value)
                     _G.ESPConfig.EnableLootBox = value
-                    print("[MOD] LOOT BOX ESP: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] LOOT BOX ESP: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2566,11 +2686,8 @@ _G.InitModMenuTab = function()
             }
         }
 
-        -- ===== CATEGORY 2: CUSTOM - PREFERENCES =====
         local CustomPrefStack = {
             { UI = AliasMap.Title, Text = "CUSTOM - PREFERENCES" },
-
-            -- CHAMS COLORS
             { UI = AliasMap.Title, Text = "--- CHAMS COLORS ---" },
             {
                 Key = "ModMenu_GreenColor",
@@ -2579,7 +2696,7 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.Mod_Chams_GreenEnabled or false end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_GreenEnabled = value
-                    print("[MOD] GREEN CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] GREEN CHAMS: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2632,7 +2749,7 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.Mod_Chams_YellowEnabled or false end,
                 SetFunc = function(_, value)
                     _G.Mod_Chams_YellowEnabled = value
-                    print("[MOD] YELLOW CHAMS: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] YELLOW CHAMS: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2678,8 +2795,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-
-            -- WALLHACK COLORS (7 COLORS DIRECT LINEARCOLOR)
             { UI = AliasMap.Title, Text = "--- WALLHACK COLORS ---" },
             {
                 Key = "WH_VisibleColor",
@@ -2702,32 +2817,6 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.ESPConfig.WallhackInvisibleColor or 3 end,
                 SetFunc = function(_, value)
                     _G.ESPConfig.WallhackInvisibleColor = value
-                    return true
-                end
-            },
-            -- AI COLORS
-            { UI = AliasMap.Title, Text = "--- AI COLORS ---" },
-            {
-                Key = "WH_AIVisibleColor",
-                UI = AliasMap.Switcher,
-                Text = "AI Visible Color",
-                SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
-                SwitcherValue = {1,2,3,4,5,6,7},
-                GetFunc = function() return _G.ESPConfig.AIVisibleColor or 5 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.AIVisibleColor = value
-                    return true
-                end
-            },
-            {
-                Key = "WH_AIInvisibleColor",
-                UI = AliasMap.Switcher,
-                Text = "AI Invisible Color",
-                SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
-                SwitcherValue = {1,2,3,4,5,6,7},
-                GetFunc = function() return _G.ESPConfig.AIInvisibleColor or 3 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfig.AIInvisibleColor = value
                     return true
                 end
             },
@@ -2755,8 +2844,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-
-            -- GLOW SETTINGS (UNTOUCHED)
             { UI = AliasMap.Title, Text = "--- GLOW SETTINGS ---" },
             {
                 Key = "WH_GlowEnabled",
@@ -2765,7 +2852,7 @@ _G.InitModMenuTab = function()
                 GetFunc = function() return _G.ESPConfig.GlowEnabled end,
                 SetFunc = function(_, value)
                     _G.ESPConfig.GlowEnabled = value
-                    print("[MOD] GLOW: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] GLOW: " .. (value and "ON" or "OFF"))
                     return true
                 end
             },
@@ -2785,11 +2872,8 @@ _G.InitModMenuTab = function()
             }
         }
 
-        -- ===== CATEGORY 3: MEMORY FEATURES =====
         local MemoryStack = {
             { UI = AliasMap.Title, Text = "MEMORY FEATURES (USE AT OWN RISK)" },
-
-            -- Speed Boost
             {
                 Key = "Mem_SpeedBoost",
                 UI = AliasMap.TitleSwitcher,
@@ -2814,8 +2898,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-
-            -- Anti-Gravity
             {
                 Key = "Mem_AntiGravity",
                 UI = AliasMap.TitleSwitcher,
@@ -2840,8 +2922,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-
-            -- Wall Climb
             {
                 Key = "Mem_WallClimb",
                 UI = AliasMap.TitleSwitcher,
@@ -2852,10 +2932,7 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-
             { UI = AliasMap.Title, Text = "--- WEAPON TWEAKS ---" },
-
-            -- Super Bullet
             {
                 Key = "Mem_SuperBullet",
                 UI = AliasMap.Slider,
@@ -2870,8 +2947,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-
-            -- Super Fire Rate
             {
                 Key = "Mem_SuperFireRate",
                 UI = AliasMap.TitleSwitcher,
@@ -2896,8 +2971,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-
-            -- Infinite Ammo
             {
                 Key = "Mem_InfiniteAmmo",
                 UI = AliasMap.TitleSwitcher,
@@ -2910,7 +2983,6 @@ _G.InitModMenuTab = function()
             }
         }
 
-        -- ===== REGISTER MENU =====
         SettingPageDefine.ModMenu = {
             Key = "ModMenu",
             loc = "TrnDravix MENU",
@@ -2966,7 +3038,6 @@ _G.InitModMenuTab = function()
     end
 end
 
--- Apply scene settings from config on load
 pcall(function()
     if _G.ESPConfig.BlackSky then SetBlackSky(true) end
     if _G.ESPConfig.RainEnabled then SetRainEnabled(true) end
