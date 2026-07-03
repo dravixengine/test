@@ -26,7 +26,7 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
-if _G.Mod_LootBox_Enabled == nil then _G.Mod_LootBox_Enabled = false end  -- NEW
+if _G.Mod_LootBox_Enabled == nil then _G.Mod_LootBox_Enabled = false end
 
 -- ============================================================
 -- CHAMS COLOR CONFIG
@@ -56,7 +56,7 @@ end
 _G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
 
 -- ============================================================
--- WALLHACK COLOR + GLOW CONFIG
+-- WALLHACK COLOR + GLOW CONFIG (FIXED WITH AI COLORS)
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
@@ -69,7 +69,10 @@ _G.ESPConfig = _G.ESPConfig or {
     BlackSky = false,
     RainEnabled = false,
     SnowEnabled = false,
-    EnableLootBox = false,  -- NEW
+    EnableLootBox = false,
+    -- AI Colors (NEW)
+    AIVisibleColor = 5,          -- Default Cyan for AI visible
+    AIInvisibleColor = 3,        -- Default Yellow for AI invisible
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
@@ -335,7 +338,7 @@ function ApplyMemoryInfiniteAmmo(enabled)
 end
 
 -- ============================================================
--- LOOT BOX ESP (NEW)
+-- LOOT BOX ESP
 -- ============================================================
 local lootBoxCache = {}
 local lootBoxCacheTime = 0
@@ -978,7 +981,7 @@ end)
 
 -- ============================================================
 -- ==================== PBC WALLHACK MODULE ====================
--- (Replaced with simple version from 1.lua)
+-- (FIXED WITH 7 COLORS + AI COLORS + BRIGHTNESS INTEGRATED)
 -- ============================================================
 
 local CHAMS_TIMER = nil
@@ -999,6 +1002,29 @@ local function ChamsSetupConsole()
         _G._ChamsConsoleReady = true
         print("[PBC] Console ready")
     end)
+end
+
+-- ===== COLOR CONVERTER WITH BRIGHTNESS =====
+local function GetLinearColorFromIndex(colorIdx, brightness)
+    brightness = brightness or 25
+    local baseColor = GetColorFromIndex(colorIdx)
+    if not baseColor then
+        baseColor = {R=0, G=255, B=0, A=255} -- Default Green
+    end
+    
+    -- Apply brightness (1-50 scale -> multiply factor)
+    local factor = brightness / 25.0  -- 25 = normal, 50 = 2x bright, 1 = dim
+    local r = math.min(255, math.floor(baseColor.R * factor))
+    local g = math.min(255, math.floor(baseColor.G * factor))
+    local b = math.min(255, math.floor(baseColor.B * factor))
+    
+    local LinearColor = import("LinearColor")
+    if not LinearColor then
+        return {R=r, G=g, B=b, A=255}
+    end
+    
+    -- Convert 0-255 to 0-1 range for LinearColor
+    return LinearColor(r/255, g/255, b/255, 1.0)
 end
 
 local function ChamsApplyToMesh(mesh, visColor, occColor)
@@ -1054,12 +1080,18 @@ local function ChamsTick()
         local LinearColor = import("LinearColor")
         if not LinearColor then return end
 
-        local colors = {
-            vis = LinearColor(100, 100, 5, 100),
-            occ = LinearColor(100, 0, 100, 100),
-            bVis = LinearColor(49, 48, 0, 100),
-            bOcc = LinearColor(9, 1.5, 45, 100)
-        }
+        -- Get colors from config with brightness
+        local visibleIdx = _G.ESPConfig.WallhackVisibleColor or 4   -- Default Green
+        local invisibleIdx = _G.ESPConfig.WallhackInvisibleColor or 3 -- Default Yellow
+        local aiVisibleIdx = _G.ESPConfig.AIVisibleColor or 5        -- Default Cyan
+        local aiInvisibleIdx = _G.ESPConfig.AIInvisibleColor or 3    -- Default Yellow
+        local brightness = _G.ESPConfig.WallhackBrightness or 25
+
+        -- Create colors
+        local visColor = GetLinearColorFromIndex(visibleIdx, brightness)
+        local occColor = GetLinearColorFromIndex(invisibleIdx, brightness)
+        local bVisColor = GetLinearColorFromIndex(aiVisibleIdx, brightness)
+        local bOccColor = GetLinearColorFromIndex(aiInvisibleIdx, brightness)
 
         _G._ChamsTickCount = _G._ChamsTickCount + 1
         if _G._ChamsTickCount % 6 == 0 then
@@ -1083,12 +1115,14 @@ local function ChamsTick()
 
             local isAI = false
             pcall(function() isAI = Game:IsAI(pawn) end)
-            local visColor = isAI and colors.bVis or colors.vis
-            local occColor = isAI and colors.bOcc or colors.occ
+            
+            -- Use AI colors if bot, else player colors
+            local visColorToUse = isAI and bVisColor or visColor
+            local occColorToUse = isAI and bOccColor or occColor
 
             pcall(function()
                 if slua.isValid(pawn.Mesh) then
-                    ChamsApplyToMesh(pawn.Mesh, visColor, occColor)
+                    ChamsApplyToMesh(pawn.Mesh, visColorToUse, occColorToUse)
                 end
             end)
 
@@ -1098,7 +1132,7 @@ local function ChamsTick()
                     for _, slot in ipairs(avatarSlots) do
                         local mesh = avatarComp:GetMeshCompBySlot(slot)
                         if slua.isValid(mesh) then
-                            ChamsApplyToMesh(mesh, visColor, occColor)
+                            ChamsApplyToMesh(mesh, visColorToUse, occColorToUse)
                         end
                     end
                 end
@@ -1109,7 +1143,7 @@ local function ChamsTick()
                 if weapon and slua.isValid(weapon) then
                     local mesh = weapon.Mesh
                     if mesh then
-                        ChamsApplyToMesh(mesh, visColor, occColor)
+                        ChamsApplyToMesh(mesh, visColorToUse, occColorToUse)
                     end
                 end
             end)
@@ -2277,7 +2311,7 @@ end
 ReadLiveConfig()
 _G.ForceEnableKillCounterUI()
 
--- Skin Timer (3.lua style)
+-- Skin Timer
 local function StartSkinTimer()
     if SKIN_TIMER then
         pcall(function()
@@ -2353,7 +2387,7 @@ _G.InitModMenuTab = function()
     if not SettingPageDefine.ModMenu then
         local AliasMap = require("client.slua.umg.NewSetting.Item.AliasMap")
 
-        -- ===== CATEGORY 1: ALL FEATURES (Sirf ON/OFF Toggles) =====
+        -- ===== CATEGORY 1: ALL FEATURES =====
         local AllFeaturesStack = {
             { UI = AliasMap.Title, Text = "ALL FEATURES" },
 
@@ -2461,7 +2495,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- LOOT BOX ESP TOGGLE (NEW)
             {
                 Key = "LootBoxESP",
                 UI = AliasMap.TitleSwitcher,
@@ -2509,7 +2542,7 @@ _G.InitModMenuTab = function()
             }
         }
 
-        -- ===== CATEGORY 2: CUSTOM - PREFERENCES (Colors, Sliders, Switchers) =====
+        -- ===== CATEGORY 2: CUSTOM - PREFERENCES =====
         local CustomPrefStack = {
             { UI = AliasMap.Title, Text = "CUSTOM - PREFERENCES" },
 
@@ -2648,6 +2681,32 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
+            -- AI COLORS (NEW)
+            { UI = AliasMap.Title, Text = "--- AI COLORS ---" },
+            {
+                Key = "WH_AIVisibleColor",
+                UI = AliasMap.Switcher,
+                Text = "AI Visible Color",
+                SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
+                SwitcherValue = {1,2,3,4,5,6,7},
+                GetFunc = function() return _G.ESPConfig.AIVisibleColor or 5 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.AIVisibleColor = value
+                    return true
+                end
+            },
+            {
+                Key = "WH_AIInvisibleColor",
+                UI = AliasMap.Switcher,
+                Text = "AI Invisible Color",
+                SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
+                SwitcherValue = {1,2,3,4,5,6,7},
+                GetFunc = function() return _G.ESPConfig.AIInvisibleColor or 3 end,
+                SetFunc = function(_, value)
+                    _G.ESPConfig.AIInvisibleColor = value
+                    return true
+                end
+            },
             {
                 Key = "WH_Brightness",
                 UI = AliasMap.Slider,
@@ -2673,7 +2732,7 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- GLOW SETTINGS
+            -- GLOW SETTINGS (UNTOUCHED)
             { UI = AliasMap.Title, Text = "--- GLOW SETTINGS ---" },
             {
                 Key = "WH_GlowEnabled",
