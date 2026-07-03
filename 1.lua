@@ -407,7 +407,7 @@ end
 
 -- ============================================================
 -- ============================================================
--- LICENSE KEY SYSTEM (FULLY FIXED WITH JSON PARSER)
+-- LICENSE KEY SYSTEM (FULLY FIXED - RAW RESPONSE LOGGING)
 -- ============================================================
 
 local function WriteError(msg)
@@ -420,28 +420,8 @@ local function WriteError(msg)
     return false
 end
 
-local function ParseJSON(str)
-    if not str then return {} end
-    local ok, json = pcall(require, "json")
-    if ok and json and json.decode then
-        return json.decode(str)
-    end
-    if slua.JsonDecode then
-        return slua.JsonDecode(str)
-    end
-    local data = {}
-    for key, val in str:gmatch('"(%w+)":([^,}]+)') do
-        val = val:gsub('^%s+', ''):gsub('%s+$', '')
-        if val == "true" then data[key] = true
-        elseif val == "false" then data[key] = false
-        elseif val:match('^".*"$') then data[key] = val:gsub('^"', ''):gsub('"$', '')
-        elseif tonumber(val) then data[key] = tonumber(val)
-        else data[key] = val end
-    end
-    return data
-end
-
 local function HttpGet(url)
+    -- Try ModuleManager HTTP
     local ok, mm = pcall(require, "client.module_framework.ModuleManager")
     if ok and mm then
         local http = mm.GetModule(mm.CommonModuleConfig.http_manager)
@@ -456,14 +436,17 @@ local function HttpGet(url)
             end
         end
     end
+    -- Try slua.HttpGet
     if slua.HttpGet then
         local response = slua.HttpGet(url)
         if response then return response end
     end
+    -- Try Game.HttpGet
     if Game and Game.HttpGet then
         local response = Game:HttpGet(url)
         if response then return response end
     end
+    -- Try Http module
     local ok, Http = pcall(require, "Http")
     if ok and Http then
         local request = Http:NewRequest()
@@ -498,6 +481,8 @@ local function ValidateKey()
             file:write("")
             file:close()
             WriteError("INFO: Created EMPTY keys.txt")
+            ShowPopup("KEY REQUIRED", "keys.txt created at " .. keyPath .. "\nAdd your license key and restart.")
+            return false
         else
             WriteError("ERROR: Could not create keys.txt")
             ShowPopup("FILE ERROR", "Could not create keys.txt")
@@ -540,32 +525,24 @@ local function ValidateKey()
     end
 
     WriteError("INFO: Server response received")
+    WriteError("RAW RESPONSE: " .. tostring(response))  -- 🔥 LOG RAW RESPONSE
 
-    local data = ParseJSON(response)
-    if not data or not data.valid then
-        WriteError("ERROR: Invalid server response - " .. tostring(response))
-        ShowPopup("SERVER ERROR", "Invalid response from server")
+    -- 🔥 FIXED PARSING: Just check if response contains "valid":true
+    if response:find('"valid":true') then
+        WriteError("SUCCESS: Key validated (found valid:true)")
+        -- Extract type and expiry if needed
+        local expiry = response:match('"expiry":"([^"]+)"') or "N/A"
+        local typ = response:match('"type":"([^"]+)"') or "N/A"
+        WriteError("SUCCESS: Type: " .. typ)
+        WriteError("SUCCESS: Expiry: " .. expiry)
+        ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. typ .. "\nExpiry: " .. expiry)
+        WriteError("=== LICENSE CHECK SUCCESS ===")
+        return true
+    else
+        WriteError("ERROR: Server response does not contain valid:true")
+        ShowPopup("INVALID KEY", "Server returned invalid response")
         return false
     end
-
-    if not data.valid then
-        local errorMsg = data.error or "Unknown error"
-        WriteError("ERROR: Validation failed - " .. errorMsg)
-        if data.expiry then
-            ShowPopup("KEY EXPIRED", "Expired on: " .. data.expiry)
-        else
-            ShowPopup("INVALID KEY", "Key not found in database")
-        end
-        return false
-    end
-
-    WriteError("SUCCESS: Key validated")
-    WriteError("SUCCESS: Type: " .. (data.type or "N/A"))
-    WriteError("SUCCESS: Expiry: " .. (data.expiry or "N/A"))
-    ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. (data.type or "N/A") .. "\nExpiry: " .. (data.expiry or "N/A"))
-
-    WriteError("=== LICENSE CHECK SUCCESS ===")
-    return true
 end
 
 -- ============================================================
@@ -662,6 +639,12 @@ end
 InitializeAllBypass()
 
 -- ============================================================
+-- REST OF THE SCRIPT (ESP, AIMBOT, SKINS, WALLHACK, MENU)
+-- ============================================================
+
+-- ============================================================
+-- ESP (WITH GREEN/VISIBLE + YELLOW/HIDDEN COLORS)
+-- ============================================================
 local require = require
 local import  = import
 local isValid = slua.isValid
@@ -674,9 +657,6 @@ local math = math
 local string = string
 local os = os
 
--- ============================================================
--- NOP FUNCTIONS
--- ============================================================
 local function nop() end
 local function nopt() return {} end
 local function nopnil() return nil end
@@ -722,7 +702,7 @@ pcall(function()
 end)
 
 -- ============================================================
--- ESP (WITH GREEN/VISIBLE + YELLOW/HIDDEN COLORS)
+-- ESP
 -- ============================================================
 local SecurityCommonUtils = require("GameLua.Mod.BaseMod.Common.Security.SecurityCommonUtils")
 local ASTExtraPlayerController = import("/Script/ShadowTrackerExtra.STExtraPlayerController")
