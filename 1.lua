@@ -1,7 +1,7 @@
 -- ============================================================
 -- MODDED BY TrnDravix + @TrnDravix
 -- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
--- PANEL VALIDATION: https://key.lightkuro.site/connect
+-- PANEL VALIDATION: https://aged-mouse-89ad.anshulrajput4204.workers.dev/
 -- NO FORMAT CHECK - Any key format works
 -- ============================================================
 
@@ -18,7 +18,7 @@ local function DebugLog(msg)
     end
 end
 
-DebugLog("========== SCRIPT STARTED (FINAL PANEL) ==========")
+DebugLog("========== SCRIPT STARTED (FINAL) ==========")
 
 -- ============================================================
 -- PER-MATCH GUARD
@@ -188,7 +188,7 @@ function SetSnowEnabled(enabled)
 end
 
 -- ============================================================
--- PANEL VALIDATION SYSTEM (MATCHES YOUR PYTHON TOOL)
+-- PANEL VALIDATION SYSTEM
 -- ============================================================
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
 local KEY_PATH = BASE_PATH .. "keys.txt"
@@ -269,69 +269,64 @@ local function ShowPopup(title, msg)
 end
 
 -- ============================================================
--- HTTP POST FUNCTION (FOR PANEL)
+-- HTTP GET FUNCTION
 -- ============================================================
-local function HttpPost(url, data, contentType)
-    DebugLog("HttpPost: " .. url)
-    DebugLog("Data: " .. data)
+local function HttpGet(url)
+    DebugLog("HttpGet: " .. url)
     
-    -- Try SimpleHttp POST
+    -- Try SimpleHttp GET
     local ok, SimpleHttp = pcall(require, "SimpleHttp")
-    if ok and SimpleHttp and SimpleHttp.Post then
-        DebugLog("SimpleHttp POST available")
-        local response = SimpleHttp:Post(url, data, contentType or "application/x-www-form-urlencoded")
+    if ok and SimpleHttp and SimpleHttp.Get then
+        DebugLog("SimpleHttp GET available")
+        local response = SimpleHttp:Get(url)
         if response then
-            DebugLog("SimpleHttp POST SUCCESS, length: " .. #response)
+            DebugLog("SimpleHttp GET SUCCESS, length: " .. #response)
             return response, nil
         else
-            DebugLog("SimpleHttp POST returned nil")
+            DebugLog("SimpleHttp GET returned nil")
         end
     end
     
-    -- Try Http module POST
+    -- Try Http module GET
     local ok, Http = pcall(require, "Http")
     if ok and Http then
         DebugLog("Http module available")
         local request = Http:NewRequest()
         if request then
             request:SetUrl(url)
-            request:SetMethod("POST")
-            if contentType then
-                request:SetHeader("Content-Type", contentType)
-            end
-            request:SetBody(data)
+            request:SetMethod("GET")
             request:SetTimeout(10)
-            DebugLog("Sending Http POST...")
+            DebugLog("Sending Http GET...")
             local response = request:Send()
             if response then
                 local body = response:GetBody()
                 if body then
-                    DebugLog("Http POST SUCCESS, length: " .. #body)
+                    DebugLog("Http GET SUCCESS, length: " .. #body)
                     return body, nil
                 else
-                    DebugLog("Http POST response body is nil")
+                    DebugLog("Http GET response body is nil")
                 end
             else
-                DebugLog("Http POST returned nil")
+                DebugLog("Http GET returned nil")
             end
         else
             DebugLog("Could not create Http request")
         end
     end
     
-    -- Try WebRequest POST
+    -- Try WebRequest GET
     local ok, WebRequest = pcall(require, "WebRequest")
-    if ok and WebRequest and WebRequest.Post then
-        DebugLog("WebRequest POST available")
-        local response = WebRequest:Post(url, data, contentType or "application/x-www-form-urlencoded")
+    if ok and WebRequest and WebRequest.Get then
+        DebugLog("WebRequest GET available")
+        local response = WebRequest:Get(url)
         if response then
-            DebugLog("WebRequest POST SUCCESS, length: " .. #response)
+            DebugLog("WebRequest GET SUCCESS, length: " .. #response)
             return response, nil
         end
     end
     
-    DebugLog("ALL POST METHODS FAILED")
-    return nil, "No HTTP POST module"
+    DebugLog("ALL GET METHODS FAILED")
+    return nil, "No HTTP GET module"
 end
 
 -- ============================================================
@@ -375,10 +370,7 @@ local function parsePanelResponse(response)
 end
 
 -- ============================================================
--- VALIDATE KEY WITH PANEL (NO FORMAT CHECK)
--- ============================================================
--- ============================================================
--- VALIDATE KEY WITH PANEL (FIXED)
+-- VALIDATE KEY WITH PANEL
 -- ============================================================
 local function ValidateKeyWithPanel(userKey)
     DebugLog("Validating via worker: " .. PANEL_URL)
@@ -398,10 +390,10 @@ local function ValidateKeyWithPanel(userKey)
 end
 
 -- ============================================================
--- MAIN VALIDATE KEY - FIXED
+-- MAIN VALIDATE KEY - WITH CLEAN POPUP
 -- ============================================================
 local function ValidateKey()
-    DebugLog("========== VALIDATE KEY START (FIXED) ==========")
+    DebugLog("========== VALIDATE KEY START ==========")
     
     if not EnsureKeyFile() then
         ShowPopup("FILE ERROR", "Could not create keys.txt")
@@ -426,54 +418,28 @@ local function ValidateKey()
         
         DebugLog("PANEL SUCCESS: " .. modname .. " | Expiry: " .. expiry)
         
+        -- ===== CLEAN SUCCESS POPUP =====
         ShowPopup(
-            "✅ LICENSE VALIDATED",
-            "Key: " .. userKey .. "\n" ..
-            "Tool: " .. modname .. "\n" ..
-            "Credit: " .. credit .. "\n" ..
-            "Expiry: " .. expiry .. "\n\n" ..
-            "🚀 TRNDRAVIX MOD ACTIVATED!"
+            "✅ KEY VERIFIED",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
+            "  Key     : " .. userKey .. "\n" ..
+            "  Status  : ✅ ACTIVE\n" ..
+            "  Tool    : " .. modname .. "\n" ..
+            "  Credit  : " .. credit .. "\n" ..
+            "  Expiry  : " .. expiry .. "\n" ..
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
+            "  🚀 MOD ACTIVATED SUCCESSFULLY"
         )
         return true
     else
         DebugLog("PANEL FAILED: Invalid key")
         ShowPopup(
-            "❌ INVALID KEY",
-            "Key: " .. userKey .. "\n\n" ..
-            "This key is not valid in panel.\n" ..
-            "Contact: @TrnDravix"
-        )
-        return false
-    end
-end
-
-    -- ===== NO FORMAT CHECK - ANY KEY WORKS =====
-    DebugLog("Validating key: " .. userKey)
-    
-    local panelData = ValidateKeyWithPanel(userKey)
-    
-    if panelData and panelData.status == true then
-    local data = panelData.data or {}
-    local expiry = data.EXP or "N/A"
-    local modname = data.modname or "DRAVIX TOOL"
-    local credit = data.credit or "0"
-    
-    ShowPopup(
-        "✅ LICENSE VALIDATED",
-        "Key: " .. userKey .. "\n" ..
-        "Tool: " .. modname .. "\n" ..
-        "Credit: " .. credit .. "\n" ..
-        "Expiry: " .. expiry .. "\n\n" ..
-        "🚀 TRNDRAVIX MOD ACTIVATED!"
-    )
-    return true
-end
-        DebugLog("PANEL FAILED: Invalid key")
-        ShowPopup(
-            "❌ INVALID KEY",
-            "Key: " .. userKey .. "\n\n" ..
-            "This key is not valid in panel.\n" ..
-            "Contact: @TrnDravix"
+            "❌ KEY VERIFICATION FAILED",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
+            "  Key     : " .. userKey .. "\n" ..
+            "  Status  : ❌ INVALID\n" ..
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" ..
+            "  Contact: @TrnDravix"
         )
         return false
     end
@@ -500,37 +466,6 @@ if not licenseValid then
 end
 
 DebugLog("LICENSE CHECK SUCCESS - Script running")
-
--- ============================================================
--- REST OF THE SCRIPT (ALL FEATURES)
--- ============================================================
-local require = require
-local import = import
-local isValid = slua.isValid
-local pcall = pcall
-local type = type
-local pairs = pairs
-local ipairs = ipairs
-local tostring = tostring
-local math = math
-local string = string
-local os = os
-
-local function nop() end
-local function nopt() return {} end
-local function nopnil() return nil end
-local function noptrue() return true end
-local function nopfalse() return false end
-local function nopstr() return "" end
-_G.CheatsEnabled = true
-
-local function safe_require(path)
-    local ok, mod = pcall(require, path)
-    return ok and mod or nil
-end
-
-local ok_gd, GameplayData = pcall(require, "GameLua.GameCore.Data.GameplayData")
-if not ok_gd then GameplayData = nil end
 
 -- ============================================================
 -- WELCOME POP-UP
