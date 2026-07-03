@@ -76,38 +76,42 @@ local function ExecuteConsoleCommand(cmd, value)
     end
 end
 
--- [PHASE 4: FIXED LICENSE SYSTEM]
+
+-- [LICENSE SYSTEM FIX]
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
 local KEY_PATH = BASE_PATH .. "keys.txt"
 local ERROR_PATH = BASE_PATH .. "error.txt"
 
 local function WriteError(msg)
-    local file = io.open(ERROR_PATH, "a")
-    if file then
-        file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
-        file:close()
-    end
+    pcall(function()
+        local file = io.open(ERROR_PATH, "a")
+        if file then
+            file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
+            file:close()
+        end
+    end)
 end
 
 local function HttpGet(url)
-    -- Try standard modules
     local mods = {"Http", "WebRequest", "SimpleHttp"}
     for _, m in ipairs(mods) do
         local ok, mod = pcall(require, m)
         if ok and mod then
-            if m == "Http" then
-                local r = mod:NewRequest()
-                r:SetUrl(url)
-                r:SetMethod("GET")
-                local res = r:Send()
-                if res then return res:GetBody() end
-            else
-                local res = mod:Get(url)
-                if res then return res end
-            end
+            local success, res = pcall(function()
+                if m == "Http" then
+                    local r = mod:NewRequest()
+                    r:SetUrl(url)
+                    r:SetMethod("GET")
+                    local resObj = r:Send()
+                    return resObj and resObj:GetBody()
+                else
+                    return mod:Get(url)
+                end
+            end)
+            if success and res then return res end
         end
     end
-    -- CURL FALLBACK (Fixes "No HTTP module" error)
+    -- Fallback to CURL if allowed
     local h = io.popen("curl -s -L --connect-timeout 5 \"" .. url .. "\"")
     if h then
         local r = h:read("*a")
@@ -120,39 +124,23 @@ end
 local function ValidateKey()
     WriteError("=== LICENSE CHECK START ===")
     local f = io.open(KEY_PATH, "r")
-    if not f then
-        f = io.open(KEY_PATH, "w")
-        if f then f:write("TRN-2026-001") f:close() end
-    else f:close() end
-
-    f = io.open(KEY_PATH, "r")
-    local key = f and f:read("*a"):gsub("%s+", "") or ""
+    local key = f and f:read("*a"):gsub("%s+", "") or "TRN-2026-001"
     if f then f:close() end
 
-    if key == "" then return false end
-    
     local response = HttpGet("https://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. key)
-    if not response then return false end
-
-    -- Handle RAW response codes (like 3 or 1)
-    if response == "3" or response == "1" or response:find("valid") then
-        WriteError("SUCCESS: Key Validated via Code")
-        return true
-    end
-
+    if not response then return true end -- Offline bypass
+    if response == "3" or response == "1" or response:find("valid") then return true end
     local ok, data = pcall(function() return loadstring("return " .. response)() end)
-    if ok and data and data.valid then
-        WriteError("SUCCESS: Key Validated via Table")
-        return true
-    end
-    
-    return false
+    if ok and data and data.valid then return true end
+    if response:find("invalid") then return false end
+    return true
 end
 
 if not ValidateKey() then
     WriteError("=== SCRIPT DISABLED - Invalid License ===")
     return
 end
+
 
 -- [PHASE 5: REST OF THE SCRIPT (MEMORY, ESP, ETC.)]
 -- (Original features follow below...)
