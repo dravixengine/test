@@ -1,8 +1,7 @@
 -- ============================================================
 -- MODDED BY TrnDravix + @TrnDravix
 -- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
--- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS
--- Bypass activates on game start with popup
+-- PANEL VALIDATION: https://key.lightkuro.site/connect
 -- ============================================================
 
 -- ============================================================
@@ -18,7 +17,7 @@ local function DebugLog(msg)
     end
 end
 
-DebugLog("========== SCRIPT STARTED (FINAL) ==========")
+DebugLog("========== SCRIPT STARTED (FINAL PANEL) ==========")
 
 -- ============================================================
 -- PER-MATCH GUARD
@@ -188,11 +187,13 @@ function SetSnowEnabled(enabled)
 end
 
 -- ============================================================
--- LICENSE KEY SYSTEM - HARDCODED + POPUP
+-- PANEL VALIDATION SYSTEM (MATCHES YOUR PYTHON TOOL)
 -- ============================================================
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
 local KEY_PATH = BASE_PATH .. "keys.txt"
 local ERROR_PATH = BASE_PATH .. "error.txt"
+local HWID_PATH = BASE_PATH .. ".hwid"
+local PANEL_URL = "https://key.lightkuro.site/connect"
 
 local function WriteError(msg)
     DebugLog("ERROR: " .. msg)
@@ -237,9 +238,26 @@ local function ReadKeyFile()
     return nil
 end
 
--- ============================================================
--- SHOW POPUP FUNCTION
--- ============================================================
+local function get_hwid()
+    DebugLog("Getting HWID...")
+    local file = io.open(HWID_PATH, "r")
+    if file then
+        local hwid = file:read("*all"):gsub("%s+", "")
+        file:close()
+        DebugLog("HWID read: " .. hwid)
+        return hwid
+    end
+    
+    local android_id = "RAND_" .. os.time() .. "_" .. math.random(1000, 9999)
+    local f = io.open(HWID_PATH, "w")
+    if f then
+        f:write(android_id)
+        f:close()
+        DebugLog("HWID created: " .. android_id)
+    end
+    return android_id
+end
+
 local function ShowPopup(title, msg)
     pcall(function()
         local Msg = require("client.slua.logic.common.logic_common_msg_box")
@@ -250,10 +268,149 @@ local function ShowPopup(title, msg)
 end
 
 -- ============================================================
--- VALIDATE KEY - HARDCODED + POPUP
+-- HTTP POST FUNCTION (FOR PANEL)
+-- ============================================================
+local function HttpPost(url, data, contentType)
+    DebugLog("HttpPost: " .. url)
+    DebugLog("Data: " .. data)
+    
+    -- Try SimpleHttp POST
+    local ok, SimpleHttp = pcall(require, "SimpleHttp")
+    if ok and SimpleHttp and SimpleHttp.Post then
+        DebugLog("SimpleHttp POST available")
+        local response = SimpleHttp:Post(url, data, contentType or "application/x-www-form-urlencoded")
+        if response then
+            DebugLog("SimpleHttp POST SUCCESS, length: " .. #response)
+            return response, nil
+        else
+            DebugLog("SimpleHttp POST returned nil")
+        end
+    end
+    
+    -- Try Http module POST
+    local ok, Http = pcall(require, "Http")
+    if ok and Http then
+        DebugLog("Http module available")
+        local request = Http:NewRequest()
+        if request then
+            request:SetUrl(url)
+            request:SetMethod("POST")
+            if contentType then
+                request:SetHeader("Content-Type", contentType)
+            end
+            request:SetBody(data)
+            request:SetTimeout(10)
+            DebugLog("Sending Http POST...")
+            local response = request:Send()
+            if response then
+                local body = response:GetBody()
+                if body then
+                    DebugLog("Http POST SUCCESS, length: " .. #body)
+                    return body, nil
+                else
+                    DebugLog("Http POST response body is nil")
+                end
+            else
+                DebugLog("Http POST returned nil")
+            end
+        else
+            DebugLog("Could not create Http request")
+        end
+    end
+    
+    -- Try WebRequest POST
+    local ok, WebRequest = pcall(require, "WebRequest")
+    if ok and WebRequest and WebRequest.Post then
+        DebugLog("WebRequest POST available")
+        local response = WebRequest:Post(url, data, contentType or "application/x-www-form-urlencoded")
+        if response then
+            DebugLog("WebRequest POST SUCCESS, length: " .. #response)
+            return response, nil
+        end
+    end
+    
+    DebugLog("ALL POST METHODS FAILED")
+    return nil, "No HTTP POST module"
+end
+
+-- ============================================================
+-- PARSE PANEL RESPONSE (JSON)
+-- ============================================================
+local function parsePanelResponse(response)
+    DebugLog("Parsing panel response: " .. response)
+    
+    -- Try Lua table format first
+    local data = nil
+    local ok, parsed = pcall(function()
+        return loadstring("return " .. response)()
+    end)
+    if ok and parsed then
+        data = parsed
+        DebugLog("Parsed as Lua table")
+    end
+    
+    -- Try JSON
+    if not data then
+        local ok_json, json = pcall(require, "json")
+        if ok_json and json and json.decode then
+            local ok2, decoded = pcall(json.decode, response)
+            if ok2 and decoded then
+                data = decoded
+                DebugLog("Parsed as JSON")
+            end
+        end
+    end
+    
+    -- Manual pattern matching
+    if not data then
+        local status = response:match('"status"%s*:%s*(%w+)')
+        if status then
+            data = { status = (status == "true") }
+            DebugLog("Manual parse: status=" .. status)
+        end
+    end
+    
+    return data
+end
+
+-- ============================================================
+-- VALIDATE KEY WITH PANEL (MATCHES YOUR PYTHON TOOL)
+-- ============================================================
+local function ValidateKeyWithPanel(userKey)
+    DebugLog("Validating with panel: " .. PANEL_URL)
+    
+    local hwid = get_hwid()
+    local payload = "game=PUBG&user_key=" .. userKey .. "&serial=" .. hwid
+    DebugLog("Payload: " .. payload)
+    
+    local response, err = HttpPost(PANEL_URL, payload)
+    if not response then
+        DebugLog("Panel request failed: " .. (err or "Unknown"))
+        return nil
+    end
+    
+    DebugLog("Panel response received")
+    
+    local data = parsePanelResponse(response)
+    if not data then
+        DebugLog("Could not parse panel response")
+        return nil
+    end
+    
+    DebugLog("Panel status: " .. tostring(data.status))
+    
+    if data.status == true then
+        return data.data or {}
+    end
+    
+    return nil
+end
+
+-- ============================================================
+-- MAIN VALIDATE KEY FUNCTION
 -- ============================================================
 local function ValidateKey()
-    DebugLog("========== VALIDATE KEY START ==========")
+    DebugLog("========== VALIDATE KEY START (PANEL) ==========")
     
     if not EnsureKeyFile() then
         ShowPopup("FILE ERROR", "Could not create keys.txt")
@@ -262,7 +419,7 @@ local function ValidateKey()
 
     local userKey = ReadKeyFile()
     if not userKey or userKey == "" then
-        ShowPopup("KEY MISSING", "Open " .. KEY_PATH .. "\nAdd key: TRN-2026-001")
+        ShowPopup("KEY MISSING", "Open " .. KEY_PATH .. "\nAdd your panel key")
         return false
     end
 
@@ -271,37 +428,32 @@ local function ValidateKey()
         return false
     end
 
-    -- ===== HARDCODED VALID KEYS (BOT GENERATED) =====
-    local VALID_KEYS = {
-        ["TRN-2026-001"] = true,
-        ["TRN-2026-002"] = true,
-        ["TRN-2026-003"] = true,
-        ["TRN-2026-004"] = true,
-        ["TRN-2026-005"] = true,
-        ["TRN-2026-006"] = true,
-        ["TRN-2026-007"] = true,
-        ["TRN-2026-008"] = true,
-        ["TRN-2026-009"] = true,
-        ["TRN-2026-010"] = true,
-        -- TU YHAN AUR KEYS ADD KAR
-    }
-
-    if VALID_KEYS[userKey] then
-        DebugLog("Key VALID")
+    DebugLog("Validating key with panel: " .. userKey)
+    
+    local panelData = ValidateKeyWithPanel(userKey)
+    
+    if panelData then
+        local expiry = panelData.EXP or "N/A"
+        local modname = panelData.modname or "DRAVIX TOOL"
+        local credit = panelData.credit or "0"
+        
+        DebugLog("PANEL SUCCESS: " .. modname .. " | Expiry: " .. expiry)
+        
         ShowPopup(
-            "✅ LICENSE VALIDATED", 
+            "✅ LICENSE VALIDATED",
             "Key: " .. userKey .. "\n" ..
-            "Type: Premium\n" ..
-            "Expiry: 2026-12-31\n\n" ..
+            "Tool: " .. modname .. "\n" ..
+            "Credit: " .. credit .. "\n" ..
+            "Expiry: " .. expiry .. "\n\n" ..
             "🚀 TRNDRAVIX MOD ACTIVATED!"
         )
         return true
     else
-        DebugLog("Key INVALID")
+        DebugLog("PANEL FAILED: Invalid key")
         ShowPopup(
-            "❌ INVALID KEY", 
+            "❌ INVALID KEY",
             "Key: " .. userKey .. "\n\n" ..
-            "This key is not in our database.\n" ..
+            "This key is not valid in panel.\n" ..
             "Contact: @TrnDravix"
         )
         return false
@@ -375,6 +527,7 @@ pcall(function()
         "  DEVELOPER  : @TrnDravix\n" ..
         "  STATUS     : UNDETECTED OPTIMIZED\n" ..
         "  BYPASS     : 5-LAYER DEEP SHIELD\n" ..
+        "  PANEL      : ACTIVE\n" ..
         "----------------------------------------\n" ..
         "  FEATURES   :\n" ..
         "  Aimbot        Wall ESP\n" ..
@@ -739,7 +892,8 @@ local function ApplyHardAimbot()
         if not slua.isValid(weapon) then return end
         local entity = weapon.ShootWeaponEntityComp
         if not slua.isValid(entity) then return end
-        entity.GameDeviationFactor = 0.2        entity.RecoilKickADS = 0.020
+        entity.GameDeviationFactor = 0.2
+        entity.RecoilKickADS = 0.020
         entity.AccessoriesVRecoilFactor = 0.30
         entity.AccessoriesHRecoilFactor = 0.35
         entity.ExtraHitPerformScale = 10
@@ -1022,7 +1176,7 @@ end
 InitializeAllBypass()
 
 -- ============================================================
--- SKINS MODULE (SHORTENED BUT FULLY FUNCTIONAL)
+-- SKINS MODULE
 -- ============================================================
 DebugLog("Initializing Skins...")
 
