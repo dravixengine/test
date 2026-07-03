@@ -2,6 +2,7 @@
 -- MODDED BY TrnDravix + @TrnDravix
 -- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
 -- PANEL VALIDATION: https://key.lightkuro.site/connect
+-- NO FORMAT CHECK - Any key format works
 -- ============================================================
 
 -- ============================================================
@@ -374,7 +375,7 @@ local function parsePanelResponse(response)
 end
 
 -- ============================================================
--- VALIDATE KEY WITH PANEL (MATCHES YOUR PYTHON TOOL)
+-- VALIDATE KEY WITH PANEL (NO FORMAT CHECK)
 -- ============================================================
 local function ValidateKeyWithPanel(userKey)
     DebugLog("Validating with panel: " .. PANEL_URL)
@@ -407,10 +408,10 @@ local function ValidateKeyWithPanel(userKey)
 end
 
 -- ============================================================
--- MAIN VALIDATE KEY FUNCTION
+-- MAIN VALIDATE KEY - NO FORMAT CHECK
 -- ============================================================
 local function ValidateKey()
-    DebugLog("========== VALIDATE KEY START (PANEL) ==========")
+    DebugLog("========== VALIDATE KEY START (NO FORMAT) ==========")
     
     if not EnsureKeyFile() then
         ShowPopup("FILE ERROR", "Could not create keys.txt")
@@ -423,12 +424,8 @@ local function ValidateKey()
         return false
     end
 
-    if not userKey:match("^TRN%-2026%-%d%d%d$") then
-        ShowPopup("INVALID FORMAT", "Key format: TRN-2026-001")
-        return false
-    end
-
-    DebugLog("Validating key with panel: " .. userKey)
+    -- ===== NO FORMAT CHECK - ANY KEY WORKS =====
+    DebugLog("Validating key: " .. userKey)
     
     local panelData = ValidateKeyWithPanel(userKey)
     
