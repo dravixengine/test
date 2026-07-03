@@ -6,7 +6,7 @@
 -- ============================================================
 
 -- ============================================================
--- DEBUG LOGGER - HAR CHEEZ KA LOG
+-- DEBUG LOGGER
 -- ============================================================
 local DEBUG_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/debug_log.txt"
 
@@ -188,7 +188,7 @@ function SetSnowEnabled(enabled)
 end
 
 -- ============================================================
--- LICENSE KEY SYSTEM - FINAL FIX
+-- LICENSE KEY SYSTEM - HARDCODED + POPUP
 -- ============================================================
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
 local KEY_PATH = BASE_PATH .. "keys.txt"
@@ -238,68 +238,8 @@ local function ReadKeyFile()
 end
 
 -- ============================================================
--- FIXED HTTPGET - SimpleHttp PREFERRED
+-- SHOW POPUP FUNCTION
 -- ============================================================
-local function HttpGet(url)
-    DebugLog("HttpGet: " .. url)
-    
-    -- SimpleHttp (most reliable in PUBG)
-    local ok, SimpleHttp = pcall(require, "SimpleHttp")
-    if ok and SimpleHttp then
-        DebugLog("SimpleHttp loaded, sending...")
-        local response = SimpleHttp:Get(url)
-        if response then
-            DebugLog("SimpleHttp SUCCESS, length: " .. #response)
-            return response, nil
-        else
-            DebugLog("SimpleHttp returned nil")
-        end
-    end
-
-    -- Http module
-    local ok, Http = pcall(require, "Http")
-    if ok and Http then
-        local request = Http:NewRequest()
-        if request then
-            request:SetUrl(url)
-            request:SetMethod("GET")
-            request:SetTimeout(5)
-            local response = request:Send()
-            if response then
-                local body = response:GetBody()
-                DebugLog("Http SUCCESS, length: " .. #body)
-                return body, nil
-            end
-        end
-    end
-
-    -- WebRequest
-    local ok, WebRequest = pcall(require, "WebRequest")
-    if ok and WebRequest then
-        local response = WebRequest:Get(url)
-        if response then
-            DebugLog("WebRequest SUCCESS, length: " .. #response)
-            return response, nil
-        end
-    end
-
-    -- ModuleManager fallback
-    local ok, MM = pcall(require, "client.module_framework.ModuleManager")
-    if ok and MM then
-        local http = MM.GetModule(MM.CommonModuleConfig.http_manager)
-        if http and http.Get then
-            local success, response = pcall(http.Get, http, url)
-            if success and response then
-                DebugLog("ModuleManager SUCCESS")
-                return response, nil
-            end
-        end
-    end
-
-    DebugLog("ALL HTTP METHODS FAILED")
-    return nil, "No HTTP module"
-end
-
 local function ShowPopup(title, msg)
     pcall(function()
         local Msg = require("client.slua.logic.common.logic_common_msg_box")
@@ -310,7 +250,7 @@ local function ShowPopup(title, msg)
 end
 
 -- ============================================================
--- VALIDATEKEY - FINAL FIX (HANDLES NUMBER RESPONSE)
+-- VALIDATE KEY - HARDCODED + POPUP
 -- ============================================================
 local function ValidateKey()
     DebugLog("========== VALIDATE KEY START ==========")
@@ -330,103 +270,42 @@ local function ValidateKey()
         ShowPopup("INVALID FORMAT", "Key format: TRN-2026-001")
         return false
     end
-    DebugLog("Key format valid")
 
-    local apiUrl = "https://lightkuro.site/api.php?key=" .. userKey
-    DebugLog("URL: " .. apiUrl)
+    -- ===== HARDCODED VALID KEYS (BOT GENERATED) =====
+    local VALID_KEYS = {
+        ["TRN-2026-001"] = true,
+        ["TRN-2026-002"] = true,
+        ["TRN-2026-003"] = true,
+        ["TRN-2026-004"] = true,
+        ["TRN-2026-005"] = true,
+        ["TRN-2026-006"] = true,
+        ["TRN-2026-007"] = true,
+        ["TRN-2026-008"] = true,
+        ["TRN-2026-009"] = true,
+        ["TRN-2026-010"] = true,
+        -- TU YHAN AUR KEYS ADD KAR
+    }
 
-    local response, err = HttpGet(apiUrl)
-    if not response or response == "" then
-        DebugLog("Connection failed: " .. (err or "Unknown"))
-        ShowPopup("CONNECTION ERROR", "Server not reachable")
+    if VALID_KEYS[userKey] then
+        DebugLog("Key VALID")
+        ShowPopup(
+            "✅ LICENSE VALIDATED", 
+            "Key: " .. userKey .. "\n" ..
+            "Type: Premium\n" ..
+            "Expiry: 2026-12-31\n\n" ..
+            "🚀 TRNDRAVIX MOD ACTIVATED!"
+        )
+        return true
+    else
+        DebugLog("Key INVALID")
+        ShowPopup(
+            "❌ INVALID KEY", 
+            "Key: " .. userKey .. "\n\n" ..
+            "This key is not in our database.\n" ..
+            "Contact: @TrnDravix"
+        )
         return false
     end
-    
-    DebugLog("RAW: [" .. response .. "]")
-    response = response:gsub("%s+", "")
-    DebugLog("TRIMMED: [" .. response .. "]")
-
-    -- ===== PARSE RESPONSE =====
-    local data = nil
-    
-    -- Check if response is a number (status code)
-    local numResponse = tonumber(response)
-    if numResponse then
-        DebugLog("Status code: " .. numResponse)
-        if numResponse == 1 then
-            data = { valid = true, type = "Premium", expiry = "2026-12-31" }
-            DebugLog("Code 1 = VALID")
-        elseif numResponse == 2 then
-            data = { valid = false, error = "Key expired" }
-            DebugLog("Code 2 = EXPIRED")
-        elseif numResponse == 3 then
-            data = { valid = false, error = "Invalid key" }
-            DebugLog("Code 3 = INVALID")
-        else
-            data = { valid = false, error = "Unknown code: " .. numResponse }
-        end
-    end
-    
-    -- Try Lua table
-    if not data then
-        local ok, parsed = pcall(function()
-            return loadstring("return " .. response)()
-        end)
-        if ok and parsed then
-            data = parsed
-            DebugLog("Parsed as Lua table")
-        end
-    end
-    
-    -- Try JSON
-    if not data then
-        local ok_json, json = pcall(require, "json")
-        if ok_json and json and json.decode then
-            local ok2, decoded = pcall(json.decode, response)
-            if ok2 and decoded then
-                data = decoded
-                DebugLog("Parsed as JSON")
-            end
-        end
-    end
-    
-    -- Manual pattern matching
-    if not data then
-        local valid = response:match('"valid"%s*:%s*(%w+)')
-        if not valid then
-            valid = response:match('valid%s*=%s*(%w+)')
-        end
-        if valid then
-            data = { valid = (valid == "true") }
-            local typ = response:match('"type"%s*:%s*"([^"]+)"')
-            if not typ then typ = response:match('type%s*=%s*"([^"]+)"') end
-            if typ then data.type = typ end
-            DebugLog("Manual parse: valid=" .. valid)
-        end
-    end
-
-    if not data then
-        DebugLog("Could not parse response")
-        ShowPopup("PARSE ERROR", "Response: " .. response)
-        return false
-    end
-
-    DebugLog("PARSED: valid=" .. tostring(data.valid))
-
-    if not data.valid then
-        local errorMsg = data.error or "Unknown error"
-        DebugLog("Validation failed: " .. errorMsg)
-        if data.expiry then
-            ShowPopup("KEY EXPIRED", "Expired on: " .. data.expiry)
-        else
-            ShowPopup("INVALID KEY", "Key not found in database\nContact: @TrnDravix")
-        end
-        return false
-    end
-
-    DebugLog("SUCCESS: Key validated")
-    ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. (data.type or "N/A"))
-    return true
 end
 
 -- ============================================================
@@ -860,8 +739,7 @@ local function ApplyHardAimbot()
         if not slua.isValid(weapon) then return end
         local entity = weapon.ShootWeaponEntityComp
         if not slua.isValid(entity) then return end
-        entity.GameDeviationFactor = 0.2
-        entity.RecoilKickADS = 0.020
+        entity.GameDeviationFactor = 0.2        entity.RecoilKickADS = 0.020
         entity.AccessoriesVRecoilFactor = 0.30
         entity.AccessoriesHRecoilFactor = 0.35
         entity.ExtraHitPerformScale = 10
