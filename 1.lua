@@ -218,6 +218,35 @@ local function ReadKeyFile()
 end
 
 local function HttpGet(url)
+    -- ===== METHOD 1: ModuleManager (PUBG Mobile official way) =====
+    local ok, MM = pcall(require, "client.module_framework.ModuleManager")
+    if ok and MM then
+        local http = MM.GetModule(MM.CommonModuleConfig.http_manager)
+        if http then
+            -- Try Get method
+            if http.Get then
+                local success, response = pcall(http.Get, http, url)
+                if success and response then
+                    return response, nil
+                end
+            end
+            -- Try Request method
+            if http.Request then
+                local success, response = pcall(http.Request, http, "GET", url, nil, nil)
+                if success and response then
+                    return response, nil
+                end
+            end
+            -- Try Post with empty body (some versions use Post for everything)
+            if http.Post then
+                local success, response = pcall(http.Post, http, url, {}, "", nil, function(s, r) end, 5)
+                -- Actually Post is async usually, let's avoid async here.
+                -- Let's just stick to Get/Request.
+            end
+        end
+    end
+
+    -- ===== METHOD 2: Fallback to standard Lua HTTP modules =====
     local ok, Http = pcall(require, "Http")
     if ok and Http then
         local request = Http:NewRequest()
@@ -231,6 +260,7 @@ local function HttpGet(url)
             end
         end
     end
+
     local ok, WebRequest = pcall(require, "WebRequest")
     if ok and WebRequest then
         local response = WebRequest:Get(url)
@@ -238,6 +268,7 @@ local function HttpGet(url)
             return response, nil
         end
     end
+
     local ok, SimpleHttp = pcall(require, "SimpleHttp")
     if ok and SimpleHttp then
         local response = SimpleHttp:Get(url)
@@ -245,7 +276,8 @@ local function HttpGet(url)
             return response, nil
         end
     end
-    return nil, "No HTTP module"
+
+    return nil, "No HTTP module available"
 end
 
 local function ShowPopup(title, msg)
