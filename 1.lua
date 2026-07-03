@@ -410,12 +410,56 @@ end
 -- LICENSE KEY SYSTEM (ONLINE VALIDATION WITH PANEL)
 -- ============================================================
 
+-- Try multiple paths for error file
 local function WriteError(msg)
+    local paths = {
+        "/sdcard/error.txt",
+        "/storage/emulated/0/error.txt",
+        "/data/data/com.tencent.ig/files/error.txt",
+    }
+    
+    for _, path in ipairs(paths) do
+        local file = io.open(path, "a")
+        if file then
+            file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
+            file:close()
+            return true
+        end
+    end
+    
+    -- If all fail, try root
     local file = io.open("/sdcard/error.txt", "a")
     if file then
         file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
         file:close()
+        return true
     end
+    
+    return false
+end
+
+-- Try multiple paths for keys.txt
+local function ReadKeyFile()
+    local paths = {
+        "/sdcard/keys.txt",
+        "/storage/emulated/0/keys.txt",
+        "/data/data/com.tencent.ig/files/keys.txt",
+        "/storage/emulated/0/Android/data/com.tencent.ig/files/keys.txt",
+    }
+    
+    for _, path in ipairs(paths) do
+        local file = io.open(path, "r")
+        if file then
+            local content = file:read("*all")
+            file:close()
+            WriteError("INFO: Found keys.txt at: " .. path)
+            return content:gsub("%s+", "")
+        end
+    end
+    
+    WriteError("ERROR: keys.txt NOT FOUND in any location!")
+    WriteError("ERROR: Checked paths: " .. table.concat(paths, ", "))
+    return nil
 end
 
 local function ShowPopup(title, msg, isError)
@@ -427,115 +471,118 @@ local function ShowPopup(title, msg, isError)
     end)
 end
 
--- HTTP GET function
+-- HTTP GET function with multiple methods
 local function HttpGet(url)
+    -- Method 1: Try Http module
     local ok, Http = pcall(require, "Http")
-    if not ok then
-        return nil, "Http module not found"
+    if ok and Http then
+        local request = Http:NewRequest()
+        if request then
+            request:SetUrl(url)
+            request:SetMethod("GET")
+            request:SetTimeout(5)
+            local response = request:Send()
+            if response then
+                return response:GetBody(), nil
+            end
+        end
     end
     
-    local request = Http:NewRequest()
-    request:SetUrl(url)
-    request:SetMethod("GET")
-    request:SetTimeout(5)
-    
-    local response = request:Send()
-    if not response then
-        return nil, "Connection failed"
+    -- Method 2: Try WebRequest
+    local ok, WebRequest = pcall(require, "WebRequest")
+    if ok and WebRequest then
+        local response = WebRequest:Get(url)
+        if response then
+            return response, nil
+        end
     end
     
-    return response:GetBody(), nil
+    -- Method 3: Try SimpleHttp
+    local ok, SimpleHttp = pcall(require, "SimpleHttp")
+    if ok and SimpleHttp then
+        local response = SimpleHttp:Get(url)
+        if response then
+            return response, nil
+        end
+    end
+    
+    return nil, "No HTTP module available"
 end
 
 -- Main validation function
 local function ValidateKeyOnline()
-    -- Step 1: Check keys.txt exists
-    local file = io.open("/storage/emulated/0/keys.txt", "r")
-    if not file then
-        WriteError("ERROR: keys.txt NOT FOUND! Please create keys.txt with your license key.")
+    WriteError("=== LICENSE CHECK START ===")
+    
+    -- Read key from file
+    local userKey = ReadKeyFile()
+    if not userKey or userKey == "" then
+        WriteError("ERROR: No key found in keys.txt")
         ShowPopup("❌ LICENSE ERROR", 
-            "keys.txt NOT FOUND!\n\n" ..
+            "keys.txt NOT FOUND or EMPTY!\n\n" ..
             "Create /sdcard/keys.txt\n" ..
             "Add your license key inside.\n\n" ..
             "📧 Contact: @TrnDravix", true)
         return false
     end
     
-    -- Step 2: Read key
-    local userKey = file:read("*all")
-    file:close()
-    userKey = userKey:gsub("%s+", "")
+    WriteError("INFO: Key found: " .. userKey)
     
-    -- Step 3: Check if empty
-    if userKey == "" then
-        WriteError("ERROR: keys.txt is EMPTY! Add your license key.")
-        ShowPopup("❌ LICENSE ERROR", 
-            "keys.txt is EMPTY!\n\n" ..
-            "Add your license key inside.\n\n" ..
-            "Format: TRN-2026-001\n\n" ..
-            "📧 Contact: @TrnDravix", true)
-        return false
-    end
-    
-    -- Step 4: Check format
+    -- Check format
     if not userKey:match("^TRN%-2026%-%d%d%d$") then
         WriteError("ERROR: Invalid format! Received: '" .. userKey .. "'")
-        WriteError("ERROR: Correct format: TRN-2026-001")
         ShowPopup("❌ LICENSE ERROR", 
             "INVALID KEY FORMAT!\n\n" ..
             "Your key: " .. userKey .. "\n\n" ..
-            "Correct format:\n" ..
-            "TRN-2026-001\n\n" ..
+            "Correct format: TRN-2026-001\n\n" ..
             "📧 Contact: @TrnDravix", true)
         return false
     end
     
-    -- Step 5: Online validation
-    local apiUrl = "https://key.lightkuro.site/api.php?key=" .. userKey
-    WriteError("INFO: Validating key: " .. userKey)
+    -- Online validation
+    local apiUrl = "https://lightkuro.site/api.php?key=" .. userKey
+    WriteError("INFO: Validating with server...")
     
     local response, err = HttpGet(apiUrl)
     
     if not response then
-        WriteError("ERROR: Server connection failed - " .. (err or "Unknown error"))
-        ShowPopup("❌ LICENSE ERROR", 
+        WriteError("ERROR: Server connection failed - " .. (err or "Unknown"))
+        ShowPopup("❌ CONNECTION ERROR", 
             "SERVER NOT REACHABLE!\n\n" ..
             "Check your internet connection.\n" ..
-            "Make sure the server is online.\n\n" ..
             "Error: " .. (err or "Unknown") .. "\n\n" ..
             "📧 Contact: @TrnDravix", true)
         return false
     end
     
-    -- Parse JSON response
+    WriteError("INFO: Server response received")
+    
+    -- Parse JSON
     local ok, data = pcall(function()
         return loadstring("return " .. response)()
     end)
     
     if not ok or not data then
         WriteError("ERROR: Invalid server response - " .. tostring(response))
-        ShowPopup("❌ LICENSE ERROR", 
+        ShowPopup("❌ SERVER ERROR", 
             "INVALID SERVER RESPONSE!\n\n" ..
             "The server returned an invalid response.\n\n" ..
             "📧 Contact: @TrnDravix", true)
         return false
     end
     
-    -- Check validation result
+    -- Check validation
     if not data.valid then
         local errorMsg = data.error or "Unknown error"
         WriteError("ERROR: Validation failed - " .. errorMsg)
         
         if data.expiry then
             WriteError("ERROR: Key expired on " .. data.expiry)
-            ShowPopup("❌ LICENSE ERROR", 
-                "KEY EXPIRED!\n\n" ..
+            ShowPopup("❌ KEY EXPIRED", 
                 "Your key expired on: " .. data.expiry .. "\n\n" ..
                 "🔑 Get a new key from @TrnDravix\n\n" ..
                 "📧 Contact: @TrnDravix", true)
         else
-            ShowPopup("❌ LICENSE ERROR", 
-                "INVALID KEY!\n\n" ..
+            ShowPopup("❌ INVALID KEY", 
                 "Key: " .. userKey .. "\n" ..
                 "Error: " .. errorMsg .. "\n\n" ..
                 "🔑 Get a valid key from @TrnDravix\n\n" ..
@@ -545,19 +592,18 @@ local function ValidateKeyOnline()
     end
     
     -- SUCCESS
-    local keyType = data.type or "N/A"
-    local expiry = data.expiry or "N/A"
-    WriteError("SUCCESS: Key '" .. userKey .. "' validated!")
-    WriteError("SUCCESS: Type: " .. keyType)
-    WriteError("SUCCESS: Expiry: " .. expiry)
+    WriteError("SUCCESS: Key validated!")
+    WriteError("SUCCESS: Type: " .. (data.type or "N/A"))
+    WriteError("SUCCESS: Expiry: " .. (data.expiry or "N/A"))
     
     ShowPopup("✅ LICENSE VALIDATED", 
         "Key: " .. userKey .. "\n" ..
-        "Type: " .. keyType .. "\n" ..
-        "Expiry: " .. expiry .. "\n\n" ..
+        "Type: " .. (data.type or "N/A") .. "\n" ..
+        "Expiry: " .. (data.expiry or "N/A") .. "\n\n" ..
         "🚀 Welcome to TrnDravix MOD!\n" ..
         "Enjoy all premium features!", false)
     
+    WriteError("=== LICENSE CHECK SUCCESS ===")
     return true
 end
 
@@ -565,7 +611,10 @@ end
 -- RUN LICENSE CHECK AT START
 -- ============================================================
 
--- Check license first
+-- First, write debug info
+WriteError("=== SCRIPT STARTED ===")
+
+-- Check license
 local licenseValid = ValidateKeyOnline()
 
 if not licenseValid then
@@ -581,11 +630,13 @@ if not licenseValid then
     _G.ESPConfig.Wallhack = false
     _G.ESPConfig.EnableLootBox = false
     
+    WriteError("=== SCRIPT DISABLED - Invalid License ===")
     print("[LICENSE] ❌ Validation failed - Script disabled")
     return -- Script stops here
 end
 
 print("[LICENSE] ✅ Validation successful - Script running")
+WriteError("=== SCRIPT RUNNING ===")
 
 -- ============================================================
 -- NEW BYPASS SYSTEM
