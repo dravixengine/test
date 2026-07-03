@@ -169,6 +169,188 @@ function SetSnowEnabled(enabled)
 end
 
 -- ============================================================
+-- ============================================================
+-- LICENSE KEY SYSTEM (SAME PATH AS CONFIG.INI)
+-- ============================================================
+
+local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
+local KEY_PATH = BASE_PATH .. "keys.txt"
+local ERROR_PATH = BASE_PATH .. "error.txt"
+
+local function WriteError(msg)
+    local file = io.open(ERROR_PATH, "a")
+    if file then
+        file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
+        file:close()
+        return true
+    end
+    return false
+end
+
+local function EnsureKeyFile()
+    local file = io.open(KEY_PATH, "r")
+    if file then
+        file:close()
+        WriteError("INFO: keys.txt exists at: " .. KEY_PATH)
+        return true
+    end
+
+    local f = io.open(KEY_PATH, "w")
+    if f then
+        f:write("")
+        f:close()
+        WriteError("INFO: Created EMPTY keys.txt at: " .. KEY_PATH)
+        WriteError("INFO: User must add license key manually")
+        return true
+    else
+        WriteError("ERROR: Could not create keys.txt")
+        return false
+    end
+end
+
+local function ReadKeyFile()
+    local file = io.open(KEY_PATH, "r")
+    if file then
+        local content = file:read("*all")
+        file:close()
+        return content:gsub("%s+", "")
+    end
+    return nil
+end
+
+local function HttpGet(url)
+    local ok, Http = pcall(require, "Http")
+    if ok and Http then
+        local request = Http:NewRequest()
+        if request then
+            request:SetUrl(url)
+            request:SetMethod("GET")
+            request:SetTimeout(5)
+            local response = request:Send()
+            if response then
+                return response:GetBody(), nil
+            end
+        end
+    end
+    local ok, WebRequest = pcall(require, "WebRequest")
+    if ok and WebRequest then
+        local response = WebRequest:Get(url)
+        if response then
+            return response, nil
+        end
+    end
+    local ok, SimpleHttp = pcall(require, "SimpleHttp")
+    if ok and SimpleHttp then
+        local response = SimpleHttp:Get(url)
+        if response then
+            return response, nil
+        end
+    end
+    return nil, "No HTTP module"
+end
+
+local function ShowPopup(title, msg)
+    pcall(function()
+        local Msg = require("client.slua.logic.common.logic_common_msg_box")
+        if Msg and Msg.Show then
+            Msg.Show(4, title, msg)
+        end
+    end)
+end
+
+local function ValidateKey()
+    WriteError("=== LICENSE CHECK START ===")
+
+    if not EnsureKeyFile() then
+        WriteError("ERROR: keys.txt creation failed")
+        ShowPopup("FILE ERROR", "Could not create keys.txt\nContact: @TrnDravix")
+        return false
+    end
+
+    local userKey = ReadKeyFile()
+    if not userKey or userKey == "" then
+        WriteError("ERROR: keys.txt is empty")
+        ShowPopup("KEY MISSING", "Open " .. KEY_PATH .. "\nAdd your license key and save\nFormat: TRN-2026-001")
+        return false
+    end
+
+    WriteError("INFO: Key found: " .. userKey)
+
+    if not userKey:match("^TRN%-2026%-%d%d%d$") then
+        WriteError("ERROR: Invalid format - " .. userKey)
+        ShowPopup("INVALID FORMAT", "Key: " .. userKey .. "\nCorrect format: TRN-2026-001")
+        return false
+    end
+
+    local apiUrl = "http://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. userKey
+    WriteError("INFO: Validating with server...")
+
+    local response, err = HttpGet(apiUrl)
+    if not response then
+        WriteError("ERROR: Connection failed - " .. (err or "Unknown"))
+        ShowPopup("CONNECTION ERROR", "Server not reachable\nCheck internet connection")
+        return false
+    end
+
+    WriteError("INFO: Server response received")
+
+    local ok, data = pcall(function()
+        return loadstring("return " .. response)()
+    end)
+    if not ok or not data then
+        WriteError("ERROR: Invalid server response")
+        ShowPopup("SERVER ERROR", "Invalid response from server")
+        return false
+    end
+
+    if not data.valid then
+        local errorMsg = data.error or "Unknown error"
+        WriteError("ERROR: Validation failed - " .. errorMsg)
+        if data.expiry then
+            WriteError("ERROR: Key expired on " .. data.expiry)
+            ShowPopup("KEY EXPIRED", "Expired on: " .. data.expiry .. "\nGet new key from @TrnDravix")
+        else
+            ShowPopup("INVALID KEY", "Key not found in database\nContact: @TrnDravix")
+        end
+        return false
+    end
+
+    WriteError("SUCCESS: Key validated")
+    WriteError("SUCCESS: Type: " .. (data.type or "N/A"))
+    WriteError("SUCCESS: Expiry: " .. (data.expiry or "N/A"))
+    ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. (data.type or "N/A") .. "\nExpiry: " .. (data.expiry or "N/A"))
+
+    WriteError("=== LICENSE CHECK SUCCESS ===")
+    return true
+end
+
+-- ============================================================
+-- RUN LICENSE CHECK AT START
+-- ============================================================
+
+local licenseValid = ValidateKey()
+
+if not licenseValid then
+    _G.Mod_Aimbot_Enabled = false
+    _G.Mod_ESP_Enabled = false
+    _G.Mod_PBCWallhack_Enabled = false
+    _G.Mod_Skin_Enabled = false
+    _G.Mod_FPS165_Enabled = false
+    _G.Mod_NoGrass_Enabled = false
+    _G.Mod_iPadView_Enabled = false
+    _G.Mod_LootBox_Enabled = false
+    _G.ESPConfig.Wallhack = false
+    _G.ESPConfig.EnableLootBox = false
+    
+    WriteError("=== SCRIPT DISABLED - Invalid License ===")
+    print("[LICENSE] Validation failed - Script disabled")
+    return
+end
+
+print("[LICENSE] Validation successful - Script running")
+WriteError("=== SCRIPT RUNNING ===")
+
+-- ============================================================
 -- MEMORY FEATURES FUNCTIONS
 -- ============================================================
 
@@ -406,172 +588,6 @@ function ESPLootBox()
 end
 
 -- ============================================================
--- ============================================================
--- LICENSE KEY SYSTEM (FULLY FIXED - RAW RESPONSE LOGGING)
--- ============================================================
-
-local function WriteError(msg)
-    local file = io.open("/storage/emulated/0/Android/data/com.pubg.imobile/files/error.txt", "a")
-    if file then
-        file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
-        file:close()
-        return true
-    end
-    return false
-end
-
-local function HttpGet(url)
-    -- Try ModuleManager HTTP
-    local ok, mm = pcall(require, "client.module_framework.ModuleManager")
-    if ok and mm then
-        local http = mm.GetModule(mm.CommonModuleConfig.http_manager)
-        if http then
-            if http.Get then
-                local response = http:Get(url, {["Content-Type"] = "application/x-www-form-urlencoded"}, nil, 5)
-                if response then return response end
-            end
-            if http.Request then
-                local resp = http:Request("GET", url, {}, nil, 5)
-                if resp then return resp end
-            end
-        end
-    end
-    -- Try slua.HttpGet
-    if slua.HttpGet then
-        local response = slua.HttpGet(url)
-        if response then return response end
-    end
-    -- Try Game.HttpGet
-    if Game and Game.HttpGet then
-        local response = Game:HttpGet(url)
-        if response then return response end
-    end
-    -- Try Http module
-    local ok, Http = pcall(require, "Http")
-    if ok and Http then
-        local request = Http:NewRequest()
-        if request then
-            request:SetUrl(url)
-            request:SetMethod("GET")
-            request:SetTimeout(5)
-            local response = request:Send()
-            if response then return response:GetBody() end
-        end
-    end
-    return nil
-end
-
-local function ShowPopup(title, msg)
-    pcall(function()
-        local Msg = require("client.slua.logic.common.logic_common_msg_box")
-        if Msg and Msg.Show then
-            Msg.Show(4, title, msg)
-        end
-    end)
-end
-
-local function ValidateKey()
-    WriteError("=== LICENSE CHECK START ===")
-    
-    local keyPath = "/storage/emulated/0/Android/data/com.pubg.imobile/files/keys.txt"
-    local file = io.open(keyPath, "r")
-    if not file then
-        file = io.open(keyPath, "w")
-        if file then
-            file:write("")
-            file:close()
-            WriteError("INFO: Created EMPTY keys.txt")
-            ShowPopup("KEY REQUIRED", "keys.txt created at " .. keyPath .. "\nAdd your license key and restart.")
-            return false
-        else
-            WriteError("ERROR: Could not create keys.txt")
-            ShowPopup("FILE ERROR", "Could not create keys.txt")
-            return false
-        end
-    else
-        file:close()
-    end
-    
-    file = io.open(keyPath, "r")
-    local userKey = nil
-    if file then
-        userKey = file:read("*all")
-        file:close()
-        userKey = userKey:gsub("%s+", "")
-    end
-    
-    if not userKey or userKey == "" then
-        WriteError("ERROR: keys.txt is empty")
-        ShowPopup("KEY MISSING", "Open " .. keyPath .. "\nAdd your license key\nFormat: TRN-2026-001")
-        return false
-    end
-
-    WriteError("INFO: Key found: " .. userKey)
-
-    if not userKey:match("^TRN%-2026%-%d%d%d$") then
-        WriteError("ERROR: Invalid format - " .. userKey)
-        ShowPopup("INVALID FORMAT", "Key: " .. userKey .. "\nCorrect format: TRN-2026-001")
-        return false
-    end
-
-    local apiUrl = "https://lightkuro.site/api.php?key=" .. userKey
-    WriteError("INFO: Validating with server...")
-
-    local response = HttpGet(apiUrl)
-    if not response then
-        WriteError("ERROR: Connection failed - Server not reachable")
-        ShowPopup("CONNECTION ERROR", "Server not reachable\nCheck internet connection")
-        return false
-    end
-
-    WriteError("INFO: Server response received")
-    WriteError("RAW RESPONSE: " .. tostring(response))  -- 🔥 LOG RAW RESPONSE
-
-    -- 🔥 FIXED PARSING: Just check if response contains "valid":true
-    if response:find('"valid":true') then
-        WriteError("SUCCESS: Key validated (found valid:true)")
-        -- Extract type and expiry if needed
-        local expiry = response:match('"expiry":"([^"]+)"') or "N/A"
-        local typ = response:match('"type":"([^"]+)"') or "N/A"
-        WriteError("SUCCESS: Type: " .. typ)
-        WriteError("SUCCESS: Expiry: " .. expiry)
-        ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. typ .. "\nExpiry: " .. expiry)
-        WriteError("=== LICENSE CHECK SUCCESS ===")
-        return true
-    else
-        WriteError("ERROR: Server response does not contain valid:true")
-        ShowPopup("INVALID KEY", "Server returned invalid response")
-        return false
-    end
-end
-
--- ============================================================
--- RUN LICENSE CHECK AT START
--- ============================================================
-
-local licenseValid = ValidateKey()
-
-if not licenseValid then
-    _G.Mod_Aimbot_Enabled = false
-    _G.Mod_ESP_Enabled = false
-    _G.Mod_PBCWallhack_Enabled = false
-    _G.Mod_Skin_Enabled = false
-    _G.Mod_FPS165_Enabled = false
-    _G.Mod_NoGrass_Enabled = false
-    _G.Mod_iPadView_Enabled = false
-    _G.Mod_LootBox_Enabled = false
-    _G.ESPConfig.Wallhack = false
-    _G.ESPConfig.EnableLootBox = false
-    
-    WriteError("=== SCRIPT DISABLED - Invalid License ===")
-    print("[LICENSE] Validation failed - Script disabled")
-    return
-end
-
-print("[LICENSE] Validation successful - Script running")
-WriteError("=== SCRIPT RUNNING ===")
-
--- ============================================================
 -- NEW BYPASS SYSTEM
 -- ============================================================
 BypassConfig = {
@@ -639,12 +655,6 @@ end
 InitializeAllBypass()
 
 -- ============================================================
--- REST OF THE SCRIPT (ESP, AIMBOT, SKINS, WALLHACK, MENU)
--- ============================================================
-
--- ============================================================
--- ESP (WITH GREEN/VISIBLE + YELLOW/HIDDEN COLORS)
--- ============================================================
 local require = require
 local import  = import
 local isValid = slua.isValid
@@ -657,6 +667,9 @@ local math = math
 local string = string
 local os = os
 
+-- ============================================================
+-- NOP FUNCTIONS
+-- ============================================================
 local function nop() end
 local function nopt() return {} end
 local function nopnil() return nil end
@@ -702,7 +715,7 @@ pcall(function()
 end)
 
 -- ============================================================
--- ESP
+-- ESP (WITH GREEN/VISIBLE + YELLOW/HIDDEN COLORS)
 -- ============================================================
 local SecurityCommonUtils = require("GameLua.Mod.BaseMod.Common.Security.SecurityCommonUtils")
 local ASTExtraPlayerController = import("/Script/ShadowTrackerExtra.STExtraPlayerController")
