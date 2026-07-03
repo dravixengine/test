@@ -377,6 +377,9 @@ end
 -- ============================================================
 -- VALIDATE KEY WITH PANEL (NO FORMAT CHECK)
 -- ============================================================
+-- ============================================================
+-- VALIDATE KEY WITH PANEL (FIXED)
+-- ============================================================
 local function ValidateKeyWithPanel(userKey)
     DebugLog("Validating via worker: " .. PANEL_URL)
     
@@ -384,7 +387,7 @@ local function ValidateKeyWithPanel(userKey)
     local url = PANEL_URL .. "?key=" .. userKey .. "&serial=" .. hwid
     DebugLog("URL: " .. url)
     
-    local response, err = HttpGet(url)  -- GET request
+    local response, err = HttpGet(url)
     if not response then
         DebugLog("Worker request failed: " .. (err or "Unknown"))
         return nil
@@ -395,10 +398,10 @@ local function ValidateKeyWithPanel(userKey)
 end
 
 -- ============================================================
--- MAIN VALIDATE KEY - NO FORMAT CHECK
+-- MAIN VALIDATE KEY - FIXED
 -- ============================================================
 local function ValidateKey()
-    DebugLog("========== VALIDATE KEY START (NO FORMAT) ==========")
+    DebugLog("========== VALIDATE KEY START (FIXED) ==========")
     
     if not EnsureKeyFile() then
         ShowPopup("FILE ERROR", "Could not create keys.txt")
@@ -410,6 +413,39 @@ local function ValidateKey()
         ShowPopup("KEY MISSING", "Open " .. KEY_PATH .. "\nAdd your panel key")
         return false
     end
+
+    DebugLog("Validating key: " .. userKey)
+    
+    local panelData = ValidateKeyWithPanel(userKey)
+    
+    if panelData and panelData.status == true then
+        local data = panelData.data or {}
+        local expiry = data.EXP or "N/A"
+        local modname = data.modname or "DRAVIX TOOL"
+        local credit = data.credit or "0"
+        
+        DebugLog("PANEL SUCCESS: " .. modname .. " | Expiry: " .. expiry)
+        
+        ShowPopup(
+            "✅ LICENSE VALIDATED",
+            "Key: " .. userKey .. "\n" ..
+            "Tool: " .. modname .. "\n" ..
+            "Credit: " .. credit .. "\n" ..
+            "Expiry: " .. expiry .. "\n\n" ..
+            "🚀 TRNDRAVIX MOD ACTIVATED!"
+        )
+        return true
+    else
+        DebugLog("PANEL FAILED: Invalid key")
+        ShowPopup(
+            "❌ INVALID KEY",
+            "Key: " .. userKey .. "\n\n" ..
+            "This key is not valid in panel.\n" ..
+            "Contact: @TrnDravix"
+        )
+        return false
+    end
+end
 
     -- ===== NO FORMAT CHECK - ANY KEY WORKS =====
     DebugLog("Validating key: " .. userKey)
