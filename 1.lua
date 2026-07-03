@@ -26,7 +26,7 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
-if _G.Mod_LootBox_Enabled == nil then _G.Mod_LootBox_Enabled = false end  -- NEW
+if _G.Mod_LootBox_Enabled == nil then _G.Mod_LootBox_Enabled = false end
 
 -- ============================================================
 -- CHAMS COLOR CONFIG
@@ -60,7 +60,7 @@ _G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyI
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
-    WallhackVisibleColor = 4,    -- 1=Red,2=White,3=Yellow,4=Green,5=Cyan,6=Blue,7=Purple
+    WallhackVisibleColor = 4,
     WallhackInvisibleColor = 3,
     WallhackBrightness = 25,
     ShowAI = true,
@@ -69,19 +69,19 @@ _G.ESPConfig = _G.ESPConfig or {
     BlackSky = false,
     RainEnabled = false,
     SnowEnabled = false,
-    EnableLootBox = false,  -- NEW
+    EnableLootBox = false,
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
 local function GetColorFromIndex(idx)
     local colors = {
-        {R=255,G=0,B=0,A=255},     -- 1 Red
-        {R=255,G=255,B=255,A=255}, -- 2 White
-        {R=255,G=255,B=0,A=255},   -- 3 Yellow
-        {R=0,G=255,B=0,A=255},     -- 4 Green
-        {R=0,G=255,B=255,A=255},   -- 5 Cyan
-        {R=0,G=0,B=255,A=255},     -- 6 Blue
-        {R=255,G=0,B=255,A=255},   -- 7 Purple
+        {R=255,G=0,B=0,A=255},
+        {R=255,G=255,B=255,A=255},
+        {R=255,G=255,B=0,A=255},
+        {R=0,G=255,B=0,A=255},
+        {R=0,G=255,B=255,A=255},
+        {R=0,G=0,B=255,A=255},
+        {R=255,G=0,B=255,A=255},
     }
     return colors[idx] or colors[4]
 end
@@ -335,7 +335,7 @@ function ApplyMemoryInfiniteAmmo(enabled)
 end
 
 -- ============================================================
--- LOOT BOX ESP (NEW)
+-- LOOT BOX ESP
 -- ============================================================
 local lootBoxCache = {}
 local lootBoxCacheTime = 0
@@ -404,6 +404,188 @@ function ESPLootBox()
         end
     end)
 end
+
+-- ============================================================
+-- ============================================================
+-- LICENSE KEY SYSTEM (ONLINE VALIDATION WITH PANEL)
+-- ============================================================
+
+local function WriteError(msg)
+    local file = io.open("/sdcard/error.txt", "a")
+    if file then
+        file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
+        file:close()
+    end
+end
+
+local function ShowPopup(title, msg, isError)
+    pcall(function()
+        local Msg = require("client.slua.logic.common.logic_common_msg_box")
+        if Msg and Msg.Show then
+            Msg.Show(4, title, msg)
+        end
+    end)
+end
+
+-- HTTP GET function
+local function HttpGet(url)
+    local ok, Http = pcall(require, "Http")
+    if not ok then
+        return nil, "Http module not found"
+    end
+    
+    local request = Http:NewRequest()
+    request:SetUrl(url)
+    request:SetMethod("GET")
+    request:SetTimeout(5)
+    
+    local response = request:Send()
+    if not response then
+        return nil, "Connection failed"
+    end
+    
+    return response:GetBody(), nil
+end
+
+-- Main validation function
+local function ValidateKeyOnline()
+    -- Step 1: Check keys.txt exists
+    local file = io.open("/sdcard/keys.txt", "r")
+    if not file then
+        WriteError("ERROR: keys.txt NOT FOUND! Please create keys.txt with your license key.")
+        ShowPopup("❌ LICENSE ERROR", 
+            "keys.txt NOT FOUND!\n\n" ..
+            "Create /sdcard/keys.txt\n" ..
+            "Add your license key inside.\n\n" ..
+            "📧 Contact: @TrnDravix", true)
+        return false
+    end
+    
+    -- Step 2: Read key
+    local userKey = file:read("*all")
+    file:close()
+    userKey = userKey:gsub("%s+", "")
+    
+    -- Step 3: Check if empty
+    if userKey == "" then
+        WriteError("ERROR: keys.txt is EMPTY! Add your license key.")
+        ShowPopup("❌ LICENSE ERROR", 
+            "keys.txt is EMPTY!\n\n" ..
+            "Add your license key inside.\n\n" ..
+            "Format: TRN-2026-001\n\n" ..
+            "📧 Contact: @TrnDravix", true)
+        return false
+    end
+    
+    -- Step 4: Check format
+    if not userKey:match("^TRN%-2026%-%d%d%d$") then
+        WriteError("ERROR: Invalid format! Received: '" .. userKey .. "'")
+        WriteError("ERROR: Correct format: TRN-2026-001")
+        ShowPopup("❌ LICENSE ERROR", 
+            "INVALID KEY FORMAT!\n\n" ..
+            "Your key: " .. userKey .. "\n\n" ..
+            "Correct format:\n" ..
+            "TRN-2026-001\n\n" ..
+            "📧 Contact: @TrnDravix", true)
+        return false
+    end
+    
+    -- Step 5: Online validation
+    local apiUrl = "https://key.lightkuro.site/api.php?key=" .. userKey
+    WriteError("INFO: Validating key: " .. userKey)
+    
+    local response, err = HttpGet(apiUrl)
+    
+    if not response then
+        WriteError("ERROR: Server connection failed - " .. (err or "Unknown error"))
+        ShowPopup("❌ LICENSE ERROR", 
+            "SERVER NOT REACHABLE!\n\n" ..
+            "Check your internet connection.\n" ..
+            "Make sure the server is online.\n\n" ..
+            "Error: " .. (err or "Unknown") .. "\n\n" ..
+            "📧 Contact: @TrnDravix", true)
+        return false
+    end
+    
+    -- Parse JSON response
+    local ok, data = pcall(function()
+        return loadstring("return " .. response)()
+    end)
+    
+    if not ok or not data then
+        WriteError("ERROR: Invalid server response - " .. tostring(response))
+        ShowPopup("❌ LICENSE ERROR", 
+            "INVALID SERVER RESPONSE!\n\n" ..
+            "The server returned an invalid response.\n\n" ..
+            "📧 Contact: @TrnDravix", true)
+        return false
+    end
+    
+    -- Check validation result
+    if not data.valid then
+        local errorMsg = data.error or "Unknown error"
+        WriteError("ERROR: Validation failed - " .. errorMsg)
+        
+        if data.expiry then
+            WriteError("ERROR: Key expired on " .. data.expiry)
+            ShowPopup("❌ LICENSE ERROR", 
+                "KEY EXPIRED!\n\n" ..
+                "Your key expired on: " .. data.expiry .. "\n\n" ..
+                "🔑 Get a new key from @TrnDravix\n\n" ..
+                "📧 Contact: @TrnDravix", true)
+        else
+            ShowPopup("❌ LICENSE ERROR", 
+                "INVALID KEY!\n\n" ..
+                "Key: " .. userKey .. "\n" ..
+                "Error: " .. errorMsg .. "\n\n" ..
+                "🔑 Get a valid key from @TrnDravix\n\n" ..
+                "📧 Contact: @TrnDravix", true)
+        end
+        return false
+    end
+    
+    -- SUCCESS
+    local keyType = data.type or "N/A"
+    local expiry = data.expiry or "N/A"
+    WriteError("SUCCESS: Key '" .. userKey .. "' validated!")
+    WriteError("SUCCESS: Type: " .. keyType)
+    WriteError("SUCCESS: Expiry: " .. expiry)
+    
+    ShowPopup("✅ LICENSE VALIDATED", 
+        "Key: " .. userKey .. "\n" ..
+        "Type: " .. keyType .. "\n" ..
+        "Expiry: " .. expiry .. "\n\n" ..
+        "🚀 Welcome to TrnDravix MOD!\n" ..
+        "Enjoy all premium features!", false)
+    
+    return true
+end
+
+-- ============================================================
+-- RUN LICENSE CHECK AT START
+-- ============================================================
+
+-- Check license first
+local licenseValid = ValidateKeyOnline()
+
+if not licenseValid then
+    -- Disable ALL features
+    _G.Mod_Aimbot_Enabled = false
+    _G.Mod_ESP_Enabled = false
+    _G.Mod_PBCWallhack_Enabled = false
+    _G.Mod_Skin_Enabled = false
+    _G.Mod_FPS165_Enabled = false
+    _G.Mod_NoGrass_Enabled = false
+    _G.Mod_iPadView_Enabled = false
+    _G.Mod_LootBox_Enabled = false
+    _G.ESPConfig.Wallhack = false
+    _G.ESPConfig.EnableLootBox = false
+    
+    print("[LICENSE] ❌ Validation failed - Script disabled")
+    return -- Script stops here
+end
+
+print("[LICENSE] ✅ Validation successful - Script running")
 
 -- ============================================================
 -- NEW BYPASS SYSTEM
@@ -705,7 +887,6 @@ local function ESPTick()
     HUD:AddDebugText("► STATUS : UNDETECTED ◄", currentPawn, 1, {X=0,Y=0,Z=135}, {X=0,Y=0,Z=135}, {R=255,G=200,B=0,A=255}, true, false, true, nil, 1.0, true)
 end
     
-    -- Call LootBox ESP
     ESPLootBox()
 end
 
@@ -1271,7 +1452,7 @@ _G.InitModMenuTab = function()
     if not SettingPageDefine.ModMenu then
         local AliasMap = require("client.slua.umg.NewSetting.Item.AliasMap")
 
-        -- ===== CATEGORY 1: ALL FEATURES (Sirf ON/OFF Toggles) =====
+        -- ===== CATEGORY 1: ALL FEATURES =====
         local AllFeaturesStack = {
             { UI = AliasMap.Title, Text = "ALL FEATURES" },
 
@@ -1379,7 +1560,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- LOOT BOX ESP TOGGLE (NEW)
             {
                 Key = "LootBoxESP",
                 UI = AliasMap.TitleSwitcher,
@@ -1427,11 +1607,10 @@ _G.InitModMenuTab = function()
             }
         }
 
-        -- ===== CATEGORY 2: CUSTOM - PREFERENCES (Colors, Sliders, Switchers) =====
+        -- ===== CATEGORY 2: CUSTOM - PREFERENCES =====
         local CustomPrefStack = {
             { UI = AliasMap.Title, Text = "CUSTOM - PREFERENCES" },
 
-            -- CHAMS COLORS
             { UI = AliasMap.Title, Text = "--- CHAMS COLORS ---" },
             {
                 Key = "ModMenu_GreenColor",
@@ -1540,7 +1719,6 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- WALLHACK COLORS
             { UI = AliasMap.Title, Text = "--- WALLHACK COLORS ---" },
             {
                 Key = "WH_VisibleColor",
@@ -1591,7 +1769,6 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- GLOW SETTINGS
             { UI = AliasMap.Title, Text = "--- GLOW SETTINGS ---" },
             {
                 Key = "WH_GlowEnabled",
@@ -1624,7 +1801,6 @@ _G.InitModMenuTab = function()
         local MemoryStack = {
             { UI = AliasMap.Title, Text = "MEMORY FEATURES (USE AT OWN RISK)" },
 
-            -- Speed Boost
             {
                 Key = "Mem_SpeedBoost",
                 UI = AliasMap.TitleSwitcher,
@@ -1650,7 +1826,6 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- Anti-Gravity
             {
                 Key = "Mem_AntiGravity",
                 UI = AliasMap.TitleSwitcher,
@@ -1676,7 +1851,6 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- Wall Climb
             {
                 Key = "Mem_WallClimb",
                 UI = AliasMap.TitleSwitcher,
@@ -1690,7 +1864,6 @@ _G.InitModMenuTab = function()
 
             { UI = AliasMap.Title, Text = "--- WEAPON TWEAKS ---" },
 
-            -- Super Bullet
             {
                 Key = "Mem_SuperBullet",
                 UI = AliasMap.Slider,
@@ -1706,7 +1879,6 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- Super Fire Rate
             {
                 Key = "Mem_SuperFireRate",
                 UI = AliasMap.TitleSwitcher,
@@ -1732,7 +1904,6 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- Infinite Ammo
             {
                 Key = "Mem_InfiniteAmmo",
                 UI = AliasMap.TitleSwitcher,
