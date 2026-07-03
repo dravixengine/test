@@ -378,33 +378,20 @@ end
 -- VALIDATE KEY WITH PANEL (NO FORMAT CHECK)
 -- ============================================================
 local function ValidateKeyWithPanel(userKey)
-    DebugLog("Validating with panel: " .. PANEL_URL)
+    DebugLog("Validating via worker: " .. PANEL_URL)
     
     local hwid = get_hwid()
-    local payload = "game=PUBG&user_key=" .. userKey .. "&serial=" .. hwid
-    DebugLog("Payload: " .. payload)
+    local url = PANEL_URL .. "?key=" .. userKey .. "&serial=" .. hwid
+    DebugLog("URL: " .. url)
     
-    local response, err = HttpPost(PANEL_URL, payload)
+    local response, err = HttpGet(url)  -- GET request
     if not response then
-        DebugLog("Panel request failed: " .. (err or "Unknown"))
+        DebugLog("Worker request failed: " .. (err or "Unknown"))
         return nil
     end
     
-    DebugLog("Panel response received")
-    
-    local data = parsePanelResponse(response)
-    if not data then
-        DebugLog("Could not parse panel response")
-        return nil
-    end
-    
-    DebugLog("Panel status: " .. tostring(data.status))
-    
-    if data.status == true then
-        return data.data or {}
-    end
-    
-    return nil
+    DebugLog("Worker response: " .. response)
+    return parsePanelResponse(response)
 end
 
 -- ============================================================
