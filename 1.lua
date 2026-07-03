@@ -6,18 +6,40 @@
 -- ============================================================
 
 -- ============================================================
--- PER-MATCH GUARD (re-init when player controller changes)
+-- DEBUG LOGGER - HAR CHEEZ LOG HOGA
+-- ============================================================
+local DEBUG_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/debug_log.txt"
+
+local function DebugLog(msg)
+    local file = io.open(DEBUG_PATH, "a")
+    if file then
+        file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
+        file:close()
+    end
+    print("[DEBUG] " .. msg)
+end
+
+DebugLog("========== SCRIPT STARTED ==========")
+DebugLog("Script version: FINAL V3")
+
+-- ============================================================
+-- PER-MATCH GUARD
 -- ============================================================
 do
     local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-    if _G._MOD_LOADED and _G._MOD_PC == pc then return end
+    if _G._MOD_LOADED and _G._MOD_PC == pc then 
+        DebugLog("PER-MATCH GUARD: Script already loaded for this PC")
+        return 
+    end
     _G._MOD_LOADED = true
     _G._MOD_PC = pc
+    DebugLog("PER-MATCH GUARD: New PC detected, loading script")
 end
 
 -- ============================================================
 -- FEATURE TOGGLES
 -- ============================================================
+DebugLog("Initializing feature toggles...")
 if not _G.Mod_Aimbot_Enabled then _G.Mod_Aimbot_Enabled = false end
 if not _G.Mod_ESP_Enabled then _G.Mod_ESP_Enabled = false end
 if _G.Mod_FPS165_Enabled == nil then _G.Mod_FPS165_Enabled = true end
@@ -169,14 +191,20 @@ function SetSnowEnabled(enabled)
 end
 
 -- ============================================================
--- LICENSE KEY SYSTEM (FIXED)
+-- LICENSE KEY SYSTEM (FULLY DEBUGGED)
 -- ============================================================
+DebugLog("Initializing License System...")
 
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
 local KEY_PATH = BASE_PATH .. "keys.txt"
 local ERROR_PATH = BASE_PATH .. "error.txt"
 
+DebugLog("BASE_PATH: " .. BASE_PATH)
+DebugLog("KEY_PATH: " .. KEY_PATH)
+DebugLog("ERROR_PATH: " .. ERROR_PATH)
+
 local function WriteError(msg)
+    DebugLog("ERROR: " .. msg)
     local file = io.open(ERROR_PATH, "a")
     if file then
         file:write(os.date("%Y-%m-%d %H:%M:%S") .. " | " .. msg .. "\n")
@@ -187,63 +215,89 @@ local function WriteError(msg)
 end
 
 local function EnsureKeyFile()
+    DebugLog("Checking if keys.txt exists...")
     local file = io.open(KEY_PATH, "r")
     if file then
         file:close()
-        WriteError("INFO: keys.txt exists at: " .. KEY_PATH)
+        DebugLog("SUCCESS: keys.txt exists at: " .. KEY_PATH)
         return true
     end
 
+    DebugLog("keys.txt not found, creating new one...")
     local f = io.open(KEY_PATH, "w")
     if f then
         f:write("")
         f:close()
-        WriteError("INFO: Created EMPTY keys.txt at: " .. KEY_PATH)
-        WriteError("INFO: User must add license key manually")
+        DebugLog("SUCCESS: Created EMPTY keys.txt at: " .. KEY_PATH)
         return true
     else
-        WriteError("ERROR: Could not create keys.txt")
+        DebugLog("ERROR: Could not create keys.txt")
         return false
     end
 end
 
 local function ReadKeyFile()
+    DebugLog("Reading key from keys.txt...")
     local file = io.open(KEY_PATH, "r")
     if file then
         local content = file:read("*all")
         file:close()
-        return content:gsub("%s+", "")
+        local key = content:gsub("%s+", "")
+        DebugLog("Key read: " .. key)
+        return key
     end
+    DebugLog("ERROR: Could not read keys.txt")
     return nil
 end
 
 -- ============================================================
--- FIXED HTTPGET - USES MODULEMANAGER (PUBG OFFICIAL HTTP)
+-- FIXED HTTPGET - FULL DEBUG
 -- ============================================================
 local function HttpGet(url)
-    -- METHOD 1: ModuleManager (PUBG Mobile official)
+    DebugLog("HttpGet called with URL: " .. url)
+    
+    -- METHOD 1: ModuleManager
+    DebugLog("Trying ModuleManager method...")
     local ok, MM = pcall(require, "client.module_framework.ModuleManager")
     if ok and MM then
+        DebugLog("ModuleManager loaded successfully")
         local http = MM.GetModule(MM.CommonModuleConfig.http_manager)
         if http then
+            DebugLog("http_manager found")
+            
             if http.Get then
+                DebugLog("Trying http.Get method...")
                 local success, response = pcall(http.Get, http, url)
                 if success and response then
+                    DebugLog("http.Get SUCCESS, response length: " .. #response)
                     return response, nil
+                else
+                    DebugLog("http.Get failed: " .. tostring(response))
                 end
             end
+            
             if http.Request then
+                DebugLog("Trying http.Request method...")
                 local success, response = pcall(http.Request, http, "GET", url, nil, nil)
                 if success and response then
+                    DebugLog("http.Request SUCCESS, response length: " .. #response)
                     return response, nil
+                else
+                    DebugLog("http.Request failed: " .. tostring(response))
                 end
             end
+        else
+            DebugLog("http_manager is nil")
         end
+    else
+        DebugLog("ModuleManager not available: " .. tostring(ok))
     end
 
-    -- METHOD 2: Standard Lua HTTP modules (fallback)
+    -- METHOD 2: Http
+    DebugLog("Trying Http module...")
     local ok, Http = pcall(require, "Http")
     if ok and Http then
+        DebugLog("Http module loaded")
         local request = Http:NewRequest()
         if request then
             request:SetUrl(url)
@@ -251,31 +305,56 @@ local function HttpGet(url)
             request:SetTimeout(5)
             local response = request:Send()
             if response then
+                DebugLog("Http SUCCESS, response length: " .. #response)
                 return response:GetBody(), nil
+            else
+                DebugLog("Http request returned nil response")
             end
+        else
+            DebugLog("Could not create Http request")
         end
+    else
+        DebugLog("Http module not available")
     end
 
+    -- METHOD 3: WebRequest
+    DebugLog("Trying WebRequest module...")
     local ok, WebRequest = pcall(require, "WebRequest")
     if ok and WebRequest then
+        DebugLog("WebRequest loaded")
         local response = WebRequest:Get(url)
         if response then
+            DebugLog("WebRequest SUCCESS, response length: " .. #response)
             return response, nil
+        else
+            DebugLog("WebRequest returned nil")
         end
+    else
+        DebugLog("WebRequest not available")
     end
 
+    -- METHOD 4: SimpleHttp
+    DebugLog("Trying SimpleHttp module...")
     local ok, SimpleHttp = pcall(require, "SimpleHttp")
     if ok and SimpleHttp then
+        DebugLog("SimpleHttp loaded")
         local response = SimpleHttp:Get(url)
         if response then
+            DebugLog("SimpleHttp SUCCESS, response length: " .. #response)
             return response, nil
+        else
+            DebugLog("SimpleHttp returned nil")
         end
+    else
+        DebugLog("SimpleHttp not available")
     end
 
+    DebugLog("ALL HTTP METHODS FAILED")
     return nil, "No HTTP module available"
 end
 
 local function ShowPopup(title, msg)
+    DebugLog("Showing popup: " .. title .. " - " .. msg)
     pcall(function()
         local Msg = require("client.slua.logic.common.logic_common_msg_box")
         if Msg and Msg.Show then
@@ -284,69 +363,112 @@ local function ShowPopup(title, msg)
     end)
 end
 
--- ========== FIXED VALIDATEKEY (PARSING JSON + LUA + MANUAL) ==========
+-- ========== FIXED VALIDATEKEY - FULL DEBUG ==========
 local function ValidateKey()
-    WriteError("=== LICENSE CHECK START ===")
-
+    DebugLog("========== VALIDATE KEY START ==========")
+    
+    -- Step 1: Check/Ensure key file
+    DebugLog("STEP 1: Ensuring key file exists...")
     if not EnsureKeyFile() then
-        WriteError("ERROR: keys.txt creation failed")
+        DebugLog("STEP 1 FAILED: Could not create keys.txt")
         ShowPopup("FILE ERROR", "Could not create keys.txt\nContact: @TrnDravix")
         return false
     end
+    DebugLog("STEP 1 SUCCESS: Key file ready")
 
+    -- Step 2: Read key
+    DebugLog("STEP 2: Reading key from file...")
     local userKey = ReadKeyFile()
     if not userKey or userKey == "" then
-        WriteError("ERROR: keys.txt is empty")
+        DebugLog("STEP 2 FAILED: keys.txt is empty")
         ShowPopup("KEY MISSING", "Open " .. KEY_PATH .. "\nAdd your license key and save\nFormat: TRN-2026-001")
         return false
     end
+    DebugLog("STEP 2 SUCCESS: Key read: " .. userKey)
 
-    WriteError("INFO: Key found: " .. userKey)
-
+    -- Step 3: Validate key format
+    DebugLog("STEP 3: Validating key format...")
     if not userKey:match("^TRN%-2026%-%d%d%d$") then
-        WriteError("ERROR: Invalid format - " .. userKey)
+        DebugLog("STEP 3 FAILED: Invalid format - " .. userKey)
         ShowPopup("INVALID FORMAT", "Key: " .. userKey .. "\nCorrect format: TRN-2026-001")
         return false
     end
+    DebugLog("STEP 3 SUCCESS: Key format valid")
 
+    -- Step 4: Make HTTP request
+    DebugLog("STEP 4: Making HTTP request to server...")
     local apiUrl = "https://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. userKey
-    WriteError("INFO: Validating with server...")
+    DebugLog("API URL: " .. apiUrl)
 
     local response, err = HttpGet(apiUrl)
     if not response then
-        WriteError("ERROR: Connection failed - " .. (err or "Unknown"))
+        DebugLog("STEP 4 FAILED: Connection failed - " .. (err or "Unknown"))
         ShowPopup("CONNECTION ERROR", "Server not reachable\nCheck internet connection")
         return false
     end
+    DebugLog("STEP 4 SUCCESS: HTTP response received")
+    DebugLog("RAW RESPONSE: [" .. response .. "]")
+    DebugLog("RESPONSE TYPE: " .. type(response))
+    DebugLog("RESPONSE LENGTH: " .. #response)
 
-    WriteError("RAW RESPONSE: " .. tostring(response))
-
-    -- ========== PARSING ==========
+    -- Step 5: Parse response
+    DebugLog("STEP 5: Parsing response...")
     local data = nil
     
+    -- Check if response is just a number (status code)
+    local numResponse = tonumber(response)
+    if numResponse then
+        DebugLog("Response is a number: " .. numResponse)
+        if numResponse == 1 then
+            data = { valid = true, type = "Premium", expiry = "2026-12-31" }
+            DebugLog("Parsed as status code 1 = VALID")
+        elseif numResponse == 2 then
+            data = { valid = false, error = "Key expired (code: 2)" }
+            DebugLog("Parsed as status code 2 = EXPIRED")
+        elseif numResponse == 3 then
+            data = { valid = false, error = "Invalid key (code: 3)" }
+            DebugLog("Parsed as status code 3 = INVALID")
+        else
+            data = { valid = false, error = "Unknown status code: " .. numResponse }
+            DebugLog("Parsed as unknown status code: " .. numResponse)
+        end
+    end
+    
     -- 1. Try Lua table format
-    local ok, parsed = pcall(function()
-        return loadstring("return " .. response)()
-    end)
-    if ok and parsed then
-        data = parsed
-        WriteError("Parsed as Lua table")
+    if not data then
+        DebugLog("Trying to parse as Lua table...")
+        local ok, parsed = pcall(function()
+            return loadstring("return " .. response)()
+        end)
+        if ok and parsed then
+            data = parsed
+            DebugLog("Parsed as Lua table: valid=" .. tostring(data.valid))
+        else
+            DebugLog("Lua table parse failed: " .. tostring(ok))
+        end
     end
     
     -- 2. Try JSON format
     if not data then
+        DebugLog("Trying to parse as JSON...")
         local ok_json, json = pcall(require, "json")
         if ok_json and json and json.decode then
+            DebugLog("JSON module available")
             local ok2, decoded = pcall(json.decode, response)
             if ok2 and decoded then
                 data = decoded
-                WriteError("Parsed as JSON")
+                DebugLog("Parsed as JSON: valid=" .. tostring(data.valid))
+            else
+                DebugLog("JSON decode failed: " .. tostring(ok2))
             end
+        else
+            DebugLog("JSON module not available")
         end
     end
     
     -- 3. Manual pattern matching
     if not data then
+        DebugLog("Trying manual pattern matching...")
         local valid = response:match('"valid"%s*:%s*(%w+)')
         if not valid then
             valid = response:match('valid%s*=%s*(%w+)')
@@ -354,6 +476,7 @@ local function ValidateKey()
         
         if valid then
             data = { valid = (valid == "true") }
+            DebugLog("Manual parse found valid=" .. valid)
             
             local typ = response:match('"type"%s*:%s*"([^"]+)"')
             if not typ then
@@ -367,46 +490,53 @@ local function ValidateKey()
             end
             if expiry then data.expiry = expiry end
             
-            WriteError("Parsed via pattern matching")
+            DebugLog("Manual parse complete: type=" .. tostring(data.type) .. ", expiry=" .. tostring(data.expiry))
+        else
+            DebugLog("Manual pattern matching failed")
         end
     end
 
     if not data then
-        WriteError("ERROR: Could not parse response - " .. tostring(response))
-        ShowPopup("PARSE ERROR", "Response format unknown\nCheck error.txt for raw response")
+        DebugLog("STEP 5 FAILED: Could not parse response")
+        ShowPopup("PARSE ERROR", "Response format unknown\nCheck debug_log.txt for details")
         return false
     end
+    DebugLog("STEP 5 SUCCESS: Response parsed")
+    DebugLog("PARSED DATA: valid=" .. tostring(data.valid) .. ", type=" .. tostring(data.type) .. ", expiry=" .. tostring(data.expiry))
 
-    WriteError("PARSED DATA: valid=" .. tostring(data.valid) .. ", type=" .. tostring(data.type) .. ", expiry=" .. tostring(data.expiry))
-
+    -- Step 6: Check validity
+    DebugLog("STEP 6: Checking validity...")
     if not data.valid then
         local errorMsg = data.error or "Unknown error"
-        WriteError("ERROR: Validation failed - " .. errorMsg)
+        DebugLog("STEP 6 FAILED: Validation failed - " .. errorMsg)
         if data.expiry then
-            WriteError("ERROR: Key expired on " .. data.expiry)
+            DebugLog("Key expired on " .. data.expiry)
             ShowPopup("KEY EXPIRED", "Expired on: " .. data.expiry .. "\nGet new key from @TrnDravix")
         else
             ShowPopup("INVALID KEY", "Key not found in database\nContact: @TrnDravix")
         end
         return false
     end
+    DebugLog("STEP 6 SUCCESS: Key is valid")
 
+    DebugLog("========== VALIDATE KEY SUCCESS ==========")
     WriteError("SUCCESS: Key validated")
     WriteError("SUCCESS: Type: " .. (data.type or "N/A"))
     WriteError("SUCCESS: Expiry: " .. (data.expiry or "N/A"))
     ShowPopup("LICENSE VALIDATED", "Key: " .. userKey .. "\nType: " .. (data.type or "N/A") .. "\nExpiry: " .. (data.expiry or "N/A"))
 
-    WriteError("=== LICENSE CHECK SUCCESS ===")
     return true
 end
 
 -- ============================================================
 -- RUN LICENSE CHECK AT START
 -- ============================================================
+DebugLog("========== RUNNING LICENSE CHECK ==========")
 
 local licenseValid = ValidateKey()
 
 if not licenseValid then
+    DebugLog("LICENSE CHECK FAILED - Script disabled")
     _G.Mod_Aimbot_Enabled = false
     _G.Mod_ESP_Enabled = false
     _G.Mod_PBCWallhack_Enabled = false
@@ -423,8 +553,14 @@ if not licenseValid then
     return
 end
 
+DebugLog("LICENSE CHECK SUCCESS - Script running")
 print("[LICENSE] Validation successful - Script running")
 WriteError("=== SCRIPT RUNNING ===")
+
+-- ============================================================
+-- REMAINING SCRIPT (REST OF YOUR CODE)
+-- ============================================================
+DebugLog("Loading remaining features...")
 
 -- ============================================================
 -- MEMORY FEATURES FUNCTIONS
@@ -666,6 +802,7 @@ end
 -- ============================================================
 -- NEW BYPASS SYSTEM
 -- ============================================================
+DebugLog("Initializing bypass system...")
 BypassConfig = {
     SLUA   = true,
     MD5    = true,
@@ -680,6 +817,7 @@ function InitializeSLUABypass()
         _G.SLUABypass = true
         _G.LexusBypass = _G.LexusBypass or {}
         _G.LexusBypass.SLUA = true
+        DebugLog("SLUA Bypass initialized")
     end)
 end
 
@@ -689,6 +827,7 @@ function InitializeMD5Bypass()
         _G.MD5Bypass = true
         _G.LexusBypass = _G.LexusBypass or {}
         _G.LexusBypass.MD5 = true
+        DebugLog("MD5 Bypass initialized")
     end)
 end
 
@@ -698,6 +837,7 @@ function InitializeServerBypass()
         _G.ServerBypass = true
         _G.LexusBypass = _G.LexusBypass or {}
         _G.LexusBypass.Server = true
+        DebugLog("Server Bypass initialized")
     end)
 end
 
@@ -707,6 +847,7 @@ function InitializeDeviceBypass()
         _G.DeviceBypass = true
         _G.LexusBypass = _G.LexusBypass or {}
         _G.LexusBypass.Device = true
+        DebugLog("Device Bypass initialized")
     end)
 end
 
@@ -716,6 +857,7 @@ function InitializeBloxBypass()
         _G.BloxBypass = true
         _G.LexusBypass = _G.LexusBypass or {}
         _G.LexusBypass.Blox = true
+        DebugLog("Blox Bypass initialized")
     end)
 end
 
@@ -726,10 +868,13 @@ function InitializeAllBypass()
     if BypassConfig.Device then InitializeDeviceBypass() end
     if BypassConfig.Blox then InitializeBloxBypass() end
     _G.Bypassed = true
+    DebugLog("All bypass systems initialized")
 end
 
 InitializeAllBypass()
 
+-- ============================================================
+-- GLOBALS
 -- ============================================================
 local require = require
 local import  = import
@@ -761,11 +906,13 @@ end
 
 local ok_gd, GameplayData = pcall(require, "GameLua.GameCore.Data.GameplayData")
 if not ok_gd then GameplayData = nil end
+DebugLog("GameplayData loaded: " .. tostring(ok_gd))
 
 -- ============================================================
 -- WELCOME POP-UP
 -- ============================================================
 pcall(function()
+    DebugLog("Showing welcome popup...")
     local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
     if not Msg then Msg = require("client.slua.logic.common.logic_common_msg_box") end
     local Web = require("client.slua.logic.url.logic_webview_sdk")
@@ -788,11 +935,13 @@ pcall(function()
         "----------------------------------------\n" ..
         "        TAP TO CONNECT WITH DEVELOPER", onClick)
     end
+    DebugLog("Welcome popup shown")
 end)
 
 -- ============================================================
--- ESP (WITH GREEN/VISIBLE + YELLOW/HIDDEN COLORS)
+-- ESP
 -- ============================================================
+DebugLog("Initializing ESP...")
 local SecurityCommonUtils = require("GameLua.Mod.BaseMod.Common.Security.SecurityCommonUtils")
 local ASTExtraPlayerController = import("/Script/ShadowTrackerExtra.STExtraPlayerController")
 
@@ -1089,7 +1238,7 @@ end
 if _G.Mod_FPS165_Enabled ~= false then _G.Enable165FPSLogic() end
 if _G.Mod_iPadView_Enabled ~= false then _G.EnableiPadViewUI() end
 
--- iPad View + No Grass (realtime)
+-- iPad View + No Grass
 local pc = slua_GameFrontendHUD:GetPlayerController()
 if slua.isValid(pc) and pc.AddGameTimer and pc ~= _G._FeaturesTimerPC then
   _G._FeaturesTimerPC = pc
@@ -1236,6 +1385,7 @@ end)
 -- ============================================================
 -- ==================== SKINS MODULE ===========================
 -- ============================================================
+DebugLog("Initializing Skins module...")
 
 local SKIN_TIMER = nil
 local skinRetryCount = 0
@@ -2374,7 +2524,7 @@ local function StartSkinTimer()
                 _G.RefreshKillCounterUI()
             end)
         end)
-        print("[SKINS] Started")
+        DebugLog("Skin timer started")
         return true
     end
     return false
@@ -2384,7 +2534,7 @@ local function RetrySkinTimer()
     if skinRetryCount >= 30 then return end
     skinRetryCount = skinRetryCount + 1
     if StartSkinTimer() then
-        print("[SKINS] Ready!")
+        DebugLog("Skin timer ready")
     else
         if _G.Game and _G.Game.AddGameTimer then
             _G.Game:AddGameTimer(1.0, false, RetrySkinTimer)
@@ -2397,6 +2547,7 @@ RetrySkinTimer()
 -- ============================================================
 -- ==================== PBC WALLHACK MODULE ====================
 -- ============================================================
+DebugLog("Initializing PBC Wallhack...")
 
 local CHAMS_TIMER = nil
 _G._ChamsConsoleReady = false
@@ -2414,7 +2565,7 @@ local function ChamsSetupConsole()
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
         KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
         _G._ChamsConsoleReady = true
-        print("[PBC] Console ready")
+        DebugLog("Chams console ready")
     end)
 end
 
@@ -2551,14 +2702,14 @@ local function StartChams()
 
     if _G.Game and _G.Game.AddGameTimer then
         CHAMS_TIMER = _G.Game:AddGameTimer(0.3, true, ChamsTick)
-        print("[PBC] Active (Game timer)")
+        DebugLog("Chams started (Game timer)")
         return true
     end
 
     local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
     if slua.isValid(pc) and pc.AddGameTimer then
         CHAMS_TIMER = pc:AddGameTimer(0.3, true, ChamsTick)
-        print("[PBC] Active (PC timer)")
+        DebugLog("Chams started (PC timer)")
         return true
     end
 
@@ -2568,12 +2719,12 @@ end
 local chRetryCount = 0
 local function RetryChams()
     if chRetryCount >= 30 then
-        print("[PBC] Failed to start after 30 retries")
+        DebugLog("Chams failed to start after 30 retries")
         return
     end
     chRetryCount = chRetryCount + 1
     if StartChams() then
-        print("[PBC] Ready!")
+        DebugLog("Chams ready")
     else
         if _G.Game and _G.Game.AddGameTimer then
             _G.Game:AddGameTimer(1.0, false, RetryChams)
@@ -2586,6 +2737,8 @@ RetryChams()
 -- ============================================================
 -- MENU
 -- ============================================================
+DebugLog("Initializing menu...")
+
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
     if not LocUtil and package.loaded["client.common.LocUtil"] then
@@ -3121,6 +3274,8 @@ pcall(function()
 end)
 
 _G.InitModMenuTab()
+
+DebugLog("========== SCRIPT FULLY LOADED ==========")
 
 -- ============================================================
 -- END OF SCRIPT
