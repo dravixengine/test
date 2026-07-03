@@ -416,23 +416,22 @@ local function ValidateKey()
     
     local panelData = ValidateKeyWithPanel(userKey)
     
-    if panelData then
-        local expiry = panelData.EXP or "N/A"
-        local modname = panelData.modname or "DRAVIX TOOL"
-        local credit = panelData.credit or "0"
-        
-        DebugLog("PANEL SUCCESS: " .. modname .. " | Expiry: " .. expiry)
-        
-        ShowPopup(
-            "✅ LICENSE VALIDATED",
-            "Key: " .. userKey .. "\n" ..
-            "Tool: " .. modname .. "\n" ..
-            "Credit: " .. credit .. "\n" ..
-            "Expiry: " .. expiry .. "\n\n" ..
-            "🚀 TRNDRAVIX MOD ACTIVATED!"
-        )
-        return true
-    else
+    if panelData and panelData.status == true then
+    local data = panelData.data or {}
+    local expiry = data.EXP or "N/A"
+    local modname = data.modname or "DRAVIX TOOL"
+    local credit = data.credit or "0"
+    
+    ShowPopup(
+        "✅ LICENSE VALIDATED",
+        "Key: " .. userKey .. "\n" ..
+        "Tool: " .. modname .. "\n" ..
+        "Credit: " .. credit .. "\n" ..
+        "Expiry: " .. expiry .. "\n\n" ..
+        "🚀 TRNDRAVIX MOD ACTIVATED!"
+    )
+    return true
+end
         DebugLog("PANEL FAILED: Invalid key")
         ShowPopup(
             "❌ INVALID KEY",
