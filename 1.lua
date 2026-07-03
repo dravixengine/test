@@ -282,7 +282,7 @@ local function ValidateKey()
         return false
     end
 
-    local apiUrl = "http://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. userKey
+    local apiUrl = "https://aged-mouse-89ad.anshulrajput4204.workers.dev?key=" .. userKey
     WriteError("INFO: Validating with server...")
 
     local response, err = HttpGet(apiUrl)
