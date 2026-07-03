@@ -450,7 +450,7 @@ end
 -- Main validation function
 local function ValidateKeyOnline()
     -- Step 1: Check keys.txt exists
-    local file = io.open("/sdcard/keys.txt", "r")
+    local file = io.open("/storage/emulated/0/keys.txt", "r")
     if not file then
         WriteError("ERROR: keys.txt NOT FOUND! Please create keys.txt with your license key.")
         ShowPopup("❌ LICENSE ERROR", 
