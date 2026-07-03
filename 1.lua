@@ -217,8 +217,11 @@ local function ReadKeyFile()
     return nil
 end
 
+-- ============================================================
+-- FIXED HTTPGET - USES MODULEMANAGER (PUBG OFFICIAL HTTP)
+-- ============================================================
 local function HttpGet(url)
-    -- ===== METHOD 1: ModuleManager (PUBG Mobile official way) =====
+    -- METHOD 1: ModuleManager (PUBG Mobile official)
     local ok, MM = pcall(require, "client.module_framework.ModuleManager")
     if ok and MM then
         local http = MM.GetModule(MM.CommonModuleConfig.http_manager)
@@ -237,16 +240,10 @@ local function HttpGet(url)
                     return response, nil
                 end
             end
-            -- Try Post with empty body (some versions use Post for everything)
-            if http.Post then
-                local success, response = pcall(http.Post, http, url, {}, "", nil, function(s, r) end, 5)
-                -- Actually Post is async usually, let's avoid async here.
-                -- Let's just stick to Get/Request.
-            end
         end
     end
 
-    -- ===== METHOD 2: Fallback to standard Lua HTTP modules =====
+    -- METHOD 2: Standard Lua HTTP modules (fallback)
     local ok, Http = pcall(require, "Http")
     if ok and Http then
         local request = Http:NewRequest()
@@ -289,7 +286,7 @@ local function ShowPopup(title, msg)
     end)
 end
 
--- ========== FIXED VALIDATEKEY FUNCTION ==========
+-- ========== FIXED VALIDATEKEY (PARSING JSON + LUA + MANUAL) ==========
 local function ValidateKey()
     WriteError("=== LICENSE CHECK START ===")
 
@@ -326,7 +323,7 @@ local function ValidateKey()
 
     WriteError("RAW RESPONSE: " .. tostring(response))
 
-    -- ========== FIXED PARSING ==========
+    -- ========== PARSING ==========
     local data = nil
     
     -- 1. Try Lua table format
@@ -2044,7 +2041,8 @@ _G.ApplyLocalPlayerSkins = function(p)
     _G.ApplyWeaponSkins(p)
     for i = 1, 3 do
         local wpn = p:GetWeaponManager() and p:GetWeaponManager():GetInventoryWeaponByPropSlot(i)
-        if isValid(wpn) then            local target = _G.get_skin_id(wpn:GetWeaponID())
+        if isValid(wpn) then
+            local target = _G.get_skin_id(wpn:GetWeaponID())
             if target and target > 0 then
                 if not _G.SkinLoadedCache[target] then
                     pcall(_G.download_item, target)
