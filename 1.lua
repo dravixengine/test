@@ -56,7 +56,7 @@ end
 _G.SpeedBoostState = _G.SpeedBoostState or {active = false, timer = nil, modifyId = nil, currentChar = nil}
 
 -- ============================================================
--- WALLHACK COLOR + GLOW CONFIG (FIXED WITH AI COLORS)
+-- WALLHACK COLOR + GLOW CONFIG (FIXED - 7 COLORS DIRECT LINEARCOLOR)
 -- ============================================================
 _G.ESPConfig = _G.ESPConfig or {
     Wallhack = false,
@@ -70,23 +70,40 @@ _G.ESPConfig = _G.ESPConfig or {
     RainEnabled = false,
     SnowEnabled = false,
     EnableLootBox = false,
-    -- AI Colors (NEW)
-    AIVisibleColor = 5,          -- Default Cyan for AI visible
-    AIInvisibleColor = 3,        -- Default Yellow for AI invisible
+    -- AI Colors
+    AIVisibleColor = 5,
+    AIInvisibleColor = 3,
 }
 _G.Mod_Wallhack_Enabled = _G.ESPConfig.Wallhack
 
-local function GetColorFromIndex(idx)
+-- ===== DIRECT LINEARCOLOR 7 COLORS (0-1 RANGE) =====
+local function GetLinearColorFromIndex(idx, brightness)
+    brightness = brightness or 25
+    local factor = brightness / 25.0  -- 25 = normal, 50 = 2x, 1 = dim
+    
+    -- 7 Colors in LinearColor format (0-1 range)
     local colors = {
-        {R=255,G=0,B=0,A=255},     -- 1 Red
-        {R=255,G=255,B=255,A=255}, -- 2 White
-        {R=255,G=255,B=0,A=255},   -- 3 Yellow
-        {R=0,G=255,B=0,A=255},     -- 4 Green
-        {R=0,G=255,B=255,A=255},   -- 5 Cyan
-        {R=0,G=0,B=255,A=255},     -- 6 Blue
-        {R=255,G=0,B=255,A=255},   -- 7 Purple
+        {R=1.0, G=0.0, B=0.0, A=1.0},     -- 1 Red
+        {R=1.0, G=1.0, B=1.0, A=1.0},     -- 2 White
+        {R=1.0, G=1.0, B=0.0, A=1.0},     -- 3 Yellow
+        {R=0.0, G=1.0, B=0.0, A=1.0},     -- 4 Green
+        {R=0.0, G=1.0, B=1.0, A=1.0},     -- 5 Cyan
+        {R=0.0, G=0.0, B=1.0, A=1.0},     -- 6 Blue
+        {R=1.0, G=0.0, B=1.0, A=1.0},     -- 7 Purple
     }
-    return colors[idx] or colors[4]
+    
+    local c = colors[idx] or colors[4] -- Default Green
+    local LinearColor = import("LinearColor")
+    if not LinearColor then
+        return {R=c.R*factor, G=c.G*factor, B=c.B*factor, A=c.A}
+    end
+    
+    -- Apply brightness (multiply in 0-1 range, clamp to 1.0)
+    local r = math.min(1.0, c.R * factor)
+    local g = math.min(1.0, c.G * factor)
+    local b = math.min(1.0, c.B * factor)
+    
+    return LinearColor(r, g, b, c.A)
 end
 
 -- ============================================================
@@ -981,7 +998,7 @@ end)
 
 -- ============================================================
 -- ==================== PBC WALLHACK MODULE ====================
--- (FIXED WITH 7 COLORS + AI COLORS + BRIGHTNESS INTEGRATED)
+-- (FIXED - 7 COLORS DIRECT LINEARCOLOR WITH BRIGHTNESS)
 -- ============================================================
 
 local CHAMS_TIMER = nil
@@ -1004,27 +1021,34 @@ local function ChamsSetupConsole()
     end)
 end
 
--- ===== COLOR CONVERTER WITH BRIGHTNESS =====
-local function GetLinearColorFromIndex(colorIdx, brightness)
+-- ===== 7 COLORS DIRECT LINEARCOLOR (0-1 RANGE) =====
+local function GetLinearColorFromIndex(idx, brightness)
     brightness = brightness or 25
-    local baseColor = GetColorFromIndex(colorIdx)
-    if not baseColor then
-        baseColor = {R=0, G=255, B=0, A=255} -- Default Green
-    end
+    local factor = brightness / 25.0  -- 25 = normal, 50 = 2x, 1 = dim
     
-    -- Apply brightness (1-50 scale -> multiply factor)
-    local factor = brightness / 25.0  -- 25 = normal, 50 = 2x bright, 1 = dim
-    local r = math.min(255, math.floor(baseColor.R * factor))
-    local g = math.min(255, math.floor(baseColor.G * factor))
-    local b = math.min(255, math.floor(baseColor.B * factor))
+    -- 7 Colors in LinearColor format (0-1 range)
+    local colors = {
+        {R=1.0, G=0.0, B=0.0, A=1.0},     -- 1 Red
+        {R=1.0, G=1.0, B=1.0, A=1.0},     -- 2 White
+        {R=1.0, G=1.0, B=0.0, A=1.0},     -- 3 Yellow
+        {R=0.0, G=1.0, B=0.0, A=1.0},     -- 4 Green
+        {R=0.0, G=1.0, B=1.0, A=1.0},     -- 5 Cyan
+        {R=0.0, G=0.0, B=1.0, A=1.0},     -- 6 Blue
+        {R=1.0, G=0.0, B=1.0, A=1.0},     -- 7 Purple
+    }
     
+    local c = colors[idx] or colors[4] -- Default Green
     local LinearColor = import("LinearColor")
     if not LinearColor then
-        return {R=r, G=g, B=b, A=255}
+        return {R=c.R*factor, G=c.G*factor, B=c.B*factor, A=c.A}
     end
     
-    -- Convert 0-255 to 0-1 range for LinearColor
-    return LinearColor(r/255, g/255, b/255, 1.0)
+    -- Apply brightness (multiply in 0-1 range, clamp to 1.0)
+    local r = math.min(1.0, c.R * factor)
+    local g = math.min(1.0, c.G * factor)
+    local b = math.min(1.0, c.B * factor)
+    
+    return LinearColor(r, g, b, c.A)
 end
 
 local function ChamsApplyToMesh(mesh, visColor, occColor)
@@ -1080,14 +1104,14 @@ local function ChamsTick()
         local LinearColor = import("LinearColor")
         if not LinearColor then return end
 
-        -- Get colors from config with brightness
-        local visibleIdx = _G.ESPConfig.WallhackVisibleColor or 4   -- Default Green
-        local invisibleIdx = _G.ESPConfig.WallhackInvisibleColor or 3 -- Default Yellow
-        local aiVisibleIdx = _G.ESPConfig.AIVisibleColor or 5        -- Default Cyan
-        local aiInvisibleIdx = _G.ESPConfig.AIInvisibleColor or 3    -- Default Yellow
+        -- Get colors from config
+        local visibleIdx = _G.ESPConfig.WallhackVisibleColor or 4
+        local invisibleIdx = _G.ESPConfig.WallhackInvisibleColor or 3
+        local aiVisibleIdx = _G.ESPConfig.AIVisibleColor or 5
+        local aiInvisibleIdx = _G.ESPConfig.AIInvisibleColor or 3
         local brightness = _G.ESPConfig.WallhackBrightness or 25
 
-        -- Create colors
+        -- Create colors (direct LinearColor)
         local visColor = GetLinearColorFromIndex(visibleIdx, brightness)
         local occColor = GetLinearColorFromIndex(invisibleIdx, brightness)
         local bVisColor = GetLinearColorFromIndex(aiVisibleIdx, brightness)
@@ -2655,7 +2679,7 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- WALLHACK COLORS
+            -- WALLHACK COLORS (7 COLORS DIRECT LINEARCOLOR)
             { UI = AliasMap.Title, Text = "--- WALLHACK COLORS ---" },
             {
                 Key = "WH_VisibleColor",
@@ -2681,7 +2705,7 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- AI COLORS (NEW)
+            -- AI COLORS
             { UI = AliasMap.Title, Text = "--- AI COLORS ---" },
             {
                 Key = "WH_AIVisibleColor",
