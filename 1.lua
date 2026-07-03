@@ -170,7 +170,7 @@ end
 
 -- ============================================================
 -- ============================================================
--- LICENSE KEY SYSTEM (FIXED HTTP)
+-- LICENSE KEY SYSTEM (FULLY FIXED WITH JSON PARSER)
 -- ============================================================
 
 local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
@@ -219,22 +219,54 @@ local function ReadKeyFile()
 end
 
 -- ============================================================
--- FIXED HTTP GET - USES MODULE MANAGER + FALLBACKS
+-- JSON PARSER
+-- ============================================================
+local function ParseJSON(str)
+    -- Try json module
+    local ok, json = pcall(require, "json")
+    if ok and json and json.decode then
+        return json.decode(str)
+    end
+    
+    -- Try slua JsonDecode
+    if slua.JsonDecode then
+        return slua.JsonDecode(str)
+    end
+    
+    -- Manual parser for simple JSON
+    local data = {}
+    for key, val in str:gmatch('"(%w+)":([^,}]+)') do
+        val = val:gsub('^%s+', ''):gsub('%s+$', '')
+        if val == "true" then
+            data[key] = true
+        elseif val == "false" then
+            data[key] = false
+        elseif val:match('^".*"$') then
+            data[key] = val:gsub('^"', ''):gsub('"$', '')
+        elseif tonumber(val) then
+            data[key] = tonumber(val)
+        else
+            data[key] = val
+        end
+    end
+    return data
+end
+
+-- ============================================================
+-- HTTP GET - FIXED
 -- ============================================================
 local function HttpGet(url)
-    -- Method 1: Use ModuleManager HTTP (the one used in chunk loader)
+    -- Method 1: ModuleManager HTTP
     local ok, mm = pcall(require, "client.module_framework.ModuleManager")
     if ok and mm then
         local http = mm.GetModule(mm.CommonModuleConfig.http_manager)
         if http then
-            -- Try synchronous Get if available
             if http.Get then
                 local response, err = http:Get(url, {["Content-Type"] = "application/x-www-form-urlencoded"}, nil, 5)
                 if response then
                     return response, nil
                 end
             end
-            -- Try Request with GET
             if http.Request then
                 local resp = http:Request("GET", url, {}, nil, 5)
                 if resp then
@@ -244,7 +276,7 @@ local function HttpGet(url)
         end
     end
 
-    -- Method 2: slua.HttpGet (if exists)
+    -- Method 2: slua.HttpGet
     if slua.HttpGet then
         local response = slua.HttpGet(url)
         if response then
@@ -252,7 +284,7 @@ local function HttpGet(url)
         end
     end
 
-    -- Method 3: Game.HttpGet (if exists)
+    -- Method 3: Game.HttpGet
     if Game and Game.HttpGet then
         local response = Game:HttpGet(url)
         if response then
@@ -341,11 +373,10 @@ local function ValidateKey()
 
     WriteError("INFO: Server response received")
 
-    local ok, data = pcall(function()
-        return loadstring("return " .. response)()
-    end)
-    if not ok or not data then
-        WriteError("ERROR: Invalid server response")
+    -- 🔥 FIXED: JSON PARSER
+    local data = ParseJSON(response)
+    if not data or not data.valid then
+        WriteError("ERROR: Invalid server response - " .. tostring(response))
         ShowPopup("SERVER ERROR", "Invalid response from server")
         return false
     end
