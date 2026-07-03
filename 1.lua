@@ -194,7 +194,7 @@ local BASE_PATH = "/storage/emulated/0/Android/data/com.pubg.imobile/files/"
 local KEY_PATH = BASE_PATH .. "keys.txt"
 local ERROR_PATH = BASE_PATH .. "error.txt"
 local HWID_PATH = BASE_PATH .. ".hwid"
-local PANEL_URL = "https://key.lightkuro.site/connect"
+local PANEL_URL = "https://aged-mouse-89ad.anshulrajput4204.workers.dev/"
 
 local function WriteError(msg)
     DebugLog("ERROR: " .. msg)
