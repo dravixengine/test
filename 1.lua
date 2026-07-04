@@ -1,8 +1,8 @@
 -- ============================================================
 -- MODDED BY TrnDravix + @TrnDravix
--- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
+-- Complete MOD with SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
 -- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS
--- Bypass activates on game start with popup
+-- WITH 16-LAYER BYPASS
 -- ============================================================
 
 -- ============================================================
@@ -83,6 +83,671 @@ _G.ESPConfig = _G.ESPConfig or {
     EnableLootBox = false,
 }
 
+-- ============================================================
+-- ==================== 16-LAYER BYPASS ====================
+-- ============================================================
+
+-- 1. CLIENTENTRY BYPASS
+local function ClientEntryBypass()
+    pcall(function()
+        if _G.Tss then _G.Tss.SendSkdData = nop; _G.Tss.OnRecvData = nop end
+        if _G.TssManager then _G.TssManager.SendSkdData = nop; _G.TssManager.OnRecvData = nop end
+        if NetUtil then
+            NetUtil.SendTss = nop; NetUtil.OnTssRsp = nop; NetUtil.GEMReportSubEvent = nop
+            NetUtil.ShowSDKErrorNotice = nop; NetUtil.OnDSServerConnectionErrorNotify = nop
+            NetUtil.check_dh_packet_key = nop
+            NetUtil.OnNetworkEvent = function(eventID, eventParam, eventParam2)
+                if eventParam == "CheatDetected" or eventParam == "IdipBan" then return end
+            end
+            NetUtil.OnConnected = function(isConnected, nReason) if not isConnected then return end end
+            NetUtil.OnStateChange = function(state) if state == 4 then return end end
+            NetUtil.OnDisconnected = nop; NetUtil.CheckTime = nop
+            NetUtil.StartCheckDSActive = nop; NetUtil.StopCheckDSActive = nop
+            NetUtil.StartCheckEnterBattle = nop; NetUtil.StopCheckEnterBattle = nop
+            NetUtil.tryConnect = nop; NetUtil.ShowConnectionMsgBox = nop
+            NetUtil.LogOut = nop; NetUtil.LogoutNoRefresh = nop
+            NetUtil.ClearAutoReconnectParam = nop; NetUtil.ClearAutoReconnectTimer = nop
+            NetUtil.GetAutoReconnectParam = function() return { times = 0 } end
+        end
+        if UnrealNet then
+            UnrealNet.HandleNetworkExceptionReport = nop
+            UnrealNet.HandleNetworkException = nop
+            UnrealNet.HandleNetworkConnectionClosed = nop
+            UnrealNet.HandleSpectateException = nop
+            UnrealNet.HandleBattleExceptionReport = nop
+            UnrealNet.OnNetRepSerializeError = nop
+            UnrealNet.FilterNetworkException = function(ExceptionType, ErrorMessage)
+                if ErrorMessage and type(ErrorMessage) == "string" then
+                    local em = ErrorMessage:lower()
+                    if em:find("cheat") or em:find("ban") or em:find("security") or
+                       em:find("integrity") or em:find("violation") or em:find("hack") or
+                       em:find("flag") or em:find("detect") or em:find("verify") then
+                        return false
+                    end
+                end
+                return false
+            end
+            UnrealNet.FailureReceivedReason = UnrealNet.FailureReceivedReason or {}
+            UnrealNet.FailureReceivedReason.CheatDetected = "BYPASSED"
+            UnrealNet.HandleNetworkEvent = function(EventType, EventMessage)
+                if EventType == "NetworkEstablished" or EventType == "NetworkRecovered" then
+                else return end
+            end
+            UnrealNet.RepListMismatchDetectTrigger = nop
+            UnrealNet.RetrunToLobbyFromDisconnect = nop
+            UnrealNet.NetworkExceptionAddEnterBattleStage = nopstr
+            UnrealNet.IsNeedShowMsgBox = nopfalse
+        end
+        if Client then
+            Client.SetTssNetworkStatus = nop; Client.GEMReportEnterLobbyEvent = nop
+            Client.TPerforPlatDisconnectReport = nop
+            Client.IsConnected = function(NetInterface) return true end
+            Client.ConnectToURL = nop; Client.Disconnect = nop; Client.ReturnToLobby = nop
+            Client.GetUnrealNetworkStatus = nopstr
+            Client.MD5LuaString = function(str) return "BYPASSED_MD5" end
+            Client.GetDSVersion = function() return "999.999.999" end
+            Client.IsInReplayState = nopfalse
+        end
+        if NetManager then
+            NetManager.ProcConnected = nop; NetManager.bConnected = true
+            NetManager.ProcRespondMsg = nop; NetManager.isLogMsgAfterLogin = false
+            NetManager.logMsgMap = {}
+        end
+        if _G.Net then
+            _G.Net.SendPacket = function(LuaStateWrapper, NetInterface, msgName, ...)
+                local blockedPackets = {"report_", "Report", "tlog", "Tlog", "TLog", "exception", "Exception",
+                    "ban", "Ban", "cheat", "Cheat", "security", "Security", "verify", "Verify",
+                    "check", "Check", "detect", "Detect", "flag", "Flag"}
+                if msgName and type(msgName) == "string" then
+                    for _, bp in ipairs(blockedPackets) do
+                        if msgName:find(bp) then return nil end
+                    end
+                end
+                return true
+            end
+        end
+        if EventSystem then
+            local oldPost = EventSystem.postEvent
+            EventSystem.postEvent = function(eventType, eventID, ...)
+                if eventID and type(eventID) == "string" then
+                    local blocked = {"SECURITY", "CHEAT", "BAN", "REPORT", "FLAG"}
+                    for _, be in ipairs(blocked) do
+                        if eventID:find(be) then return end
+                    end
+                end
+                if oldPost then oldPost(eventType, eventID, ...) end
+            end
+        end
+        local logFuncs = {"log", "log_warning", "log_error", "log_shipping_client", "log_format", "log_tree"}
+        for _, funcName in ipairs(logFuncs) do
+            if _G[funcName] then
+                _G[funcName] = function(...)
+                    local args = {...}
+                    for _, arg in ipairs(args) do
+                        if type(arg) == "string" and (
+                            arg:find("cheat") or arg:find("security") or arg:find("ban") or
+                            arg:find("detect") or arg:find("verify") or arg:find("integrity")
+                        ) then return end
+                    end
+                end
+            end
+        end
+        if LogUtil then
+            LogUtil.SetForceLog = nop; LogUtil.SetLogTreeEnable = nop; LogUtil.SetWriteLog = nop
+        end
+        if sandbox then sandbox.LogError = nop; sandbox.LogWarning = nop end
+    end)
+    print("[BYPASS] ✅ ClientEntry bypassed!")
+end
+
+-- 2. HIGGSBOSONCOMPONENT BYPASS
+pcall(function()
+    if CHiggsBosonComponent then
+        CHiggsBosonComponent.ReceiveBeginPlay = nop
+        CHiggsBosonComponent.StaticShowSecurityAlertInDev = nop
+        CHiggsBosonComponent.ShowABCD = nop
+        CHiggsBosonComponent._ClientShowSecurityAlertWindow = nop
+        CHiggsBosonComponent._ReportChatRobot = nop
+        CHiggsBosonComponent.SendAntiDataFlow = nop
+        CHiggsBosonComponent.SendHitFireBtnFlow = nop
+        CHiggsBosonComponent.OnBattleResult = nop
+        CHiggsBosonComponent.SendHisarData = nop
+        CHiggsBosonComponent.RPC_Client_ShowSecurityAlertWindow = nop
+        CHiggsBosonComponent.RPC_Server_TellServerName = nop
+        CHiggsBosonComponent.RecordStrategyTimestampInReplay = nop
+        CHiggsBosonComponent.SkipAlertServer = nop
+        CHiggsBosonComponent.SetClientAlertWindowEnabled = nop
+        CHiggsBosonComponent.IsCharacterOwnerWerewolf = nopfalse
+        CHiggsBosonComponent.IsCharacterOwnerButcher = nopfalse
+        CHiggsBosonComponent._ProcessReportChatRobotQueue = nop
+        CHiggsBosonComponent.LuaNotifySecurityAbnormalJump = nop
+        CHiggsBosonComponent.bSkipAlertServer = true
+        bIsSkipAlertServer = true
+        bSkipUploadNoschat = true
+        _nReportNosChatTimerID = nil
+        _nReportNosChatMessageID = 0
+        _tReportNosChatQueue = {}
+        LastTimeHandleAlert = -1
+        print("[BYPASS] ✅ HiggsBosonComponent bypassed!")
+    end
+end)
+
+-- 3. CLIENTHAWKEYEPATROLSUBSYSTEM BYPASS
+pcall(function()
+    if ClientHawkEyePatrolSubsystem then
+        ClientHawkEyePatrolSubsystem._OnHawkSync = nop
+        ClientHawkEyePatrolSubsystem._OnHawkReportSuccess = nop
+        ClientHawkEyePatrolSubsystem._OnRecvInspectorBroadcastCount = nop
+        ClientHawkEyePatrolSubsystem.ReportCheat = nop
+        ClientHawkEyePatrolSubsystem.RequestImprison = nop
+        ClientHawkEyePatrolSubsystem.SendReportTLog = nop
+        ClientHawkEyePatrolSubsystem.IsDuringHawkEyePatrol = nopfalse
+        ClientHawkEyePatrolSubsystem._CollectBeWatchedPlayerInfo = nop
+        ClientHawkEyePatrolSubsystem.HasReported = noptrue
+        ClientHawkEyePatrolSubsystem.GetBeWatchedPlayerInfo = nopnil
+        ClientHawkEyePatrolSubsystem._OnPlayerKilledOtherPlayer = nop
+        ClientHawkEyePatrolSubsystem._StartFrameUIRefreshTimer = nop
+        ClientHawkEyePatrolSubsystem.ExitWatching = nop
+        ClientHawkEyePatrolSubsystem.WantMatchNextPatrol = nop
+        ClientHawkEyePatrolSubsystem._InitHawkEyePatrolSubsystem = function(self)
+            self._bHasInitialized = true; self._bHasReported = true
+        end
+        ClientHawkEyePatrolSubsystem._StartHideUITimer = nop
+        ClientHawkEyePatrolSubsystem._StartShowDistanceUITimer = nop
+        ClientHawkEyePatrolSubsystem._StartCloseBattleEndedTipsTimer = nop
+        ClientHawkEyePatrolSubsystem._StartBattleTimeUsageTimer = nop
+        ClientHawkEyePatrolSubsystem._StartQuitVoiceRoomTimer = nop
+        ClientHawkEyePatrolSubsystem._StartExitGameTimer = nop
+        ClientHawkEyePatrolSubsystem._CloseExitGameTimer = nop
+        ClientHawkEyePatrolSubsystem._CreateOvertimerTimerForNextPatrol = nop
+        ClientHawkEyePatrolSubsystem.ClearNextPatrolOvertimeTimer = nop
+        ClientHawkEyePatrolSubsystem.ReturnLobbyAndOpenH5 = nop
+        ClientHawkEyePatrolSubsystem.ForceNeverCloseBattleEndedTips = nop
+        ClientHawkEyePatrolSubsystem.CheckShowReportedTips = nopfalse
+        ClientHawkEyePatrolSubsystem.TryShowReportedTips = nop
+        ClientHawkEyePatrolSubsystem.ShowWatchEndedTips = nop
+        ClientHawkEyePatrolSubsystem.HasShownWatchEndedTips = noptrue
+        ClientHawkEyePatrolSubsystem.OnShowWatchEndedTips = nop
+        ClientHawkEyePatrolSubsystem.OnClickLowerLeftExitWatching = nop
+        ClientHawkEyePatrolSubsystem.OnClickBottomRightOpenReportWindow = nop
+        ClientHawkEyePatrolSubsystem._MarkHasReported = nop
+        ClientHawkEyePatrolSubsystem.GetForbidNextPatrolRemainingTimeInSeconds = function() return 0 end
+        ClientHawkEyePatrolSubsystem.GetUsedDailyTimeInSeconds = function() return 0 end
+        ClientHawkEyePatrolSubsystem.GetInspectorBroadcastCount = function() return -1 end
+        ClientHawkEyePatrolSubsystem.GetMaxInspectorBroadcastCount = function() return 0 end
+        ClientHawkEyePatrolSubsystem.CanInspectorBroadcast = nopfalse
+        ClientHawkEyePatrolSubsystem.IsCharacterLocationShouldDraw = nopfalse
+        ClientHawkEyePatrolSubsystem.InitHawkEyePatrolSubsystem = nop
+        ClientHawkEyePatrolSubsystem._PostConstruct = function(self)
+            self._bHasInitialized = true; self._bHasReported = true; self.nInspectorBroadcastCount = -1
+        end
+        ClientHawkEyePatrolSubsystem.OnRelease = nop
+        ClientHawkEyePatrolSubsystem._bHasInitialized = true
+        ClientHawkEyePatrolSubsystem._bHasReported = true
+        ClientHawkEyePatrolSubsystem._bHasShownWatchEndedTips = true
+        ClientHawkEyePatrolSubsystem.bShowBeReportedTips = true
+        ClientHawkEyePatrolSubsystem.nInspectorBroadcastCount = -1
+        print("[BYPASS] ✅ ClientHawkEyePatrolSubsystem bypassed!")
+    end
+end)
+
+-- 4. CLIENTBANLOGIC BYPASS
+pcall(function()
+    if ClientBanLogic then
+        ClientBanLogic.ReqBanInfo = nop
+        ClientBanLogic.OnVoiceSwitchNotify = nop
+        ClientBanLogic.OnVoiceBanNotify = nop
+        ClientBanLogic.OnRealTimeVoiceBanNotify = nop
+        ClientBanLogic.OnVoiceBanSuccess = nop
+        ClientBanLogic.TryOpenVoice = function()
+            EventSystem:postEvent(EVENTTYPE_INGAME_BAN, EVENTID_INGAME_BAN_FORBID_VOICE, false)
+        end
+        ClientBanLogic.IsVoiceReportEnable = nopfalse
+        ClientBanLogic.OnSyncMicSuspicious = nop
+        ClientBanLogic.OnSyncMicPreFilter = nop
+        ClientBanLogic.OnSyncBanInfo = nop
+        ClientBanLogic.OnNotifyWarningTips = nop
+        ClientBanLogic.VoiceBanEndTime = 0
+        ClientBanLogic.bEnableVoiceReport = false
+        ClientBanLogic.SuspiciousFlag = 0
+        ClientBanLogic.Reason = ""
+        ClientBanLogic.IsTranslated = false
+        print("[BYPASS] ✅ ClientBanLogic bypassed!")
+    end
+end)
+
+-- 5. REALTIMEBAN BYPASS
+pcall(function()
+    if RealTimeBan then
+        RealTimeBan.Init = function() print("[BYPASS] RealTimeBan.Init blocked!") return end
+        RealTimeBan.OnPlayerWithRealTimeBan = nop
+        RealTimeBan.OnSyncPlayerInfo = nop
+        RealTimeBan.HandleEnterGameModeFightingState = nop
+        RealTimeBan.ShowAlias = nop
+        RealTimeBan.SetOnRankInspectorUID = nop
+        RealTimeBan.IsUIDOnRankInspector = nopfalse
+        RealTimeBan.GetUIDInspectorRank = function() return -1 end
+        RealTimeBan.SetInspectorBroadcastCountUID = nop
+        RealTimeBan.GetUIDInspectorBroadcastCount = function() return -1 end
+        RealTimeBan.GetTipsIDOffset = function() return 0 end
+        RealTimeBan.GetTipsIDOffsetWithUID = function() return 0 end
+        RealTimeBan.GetTipsIDOffsetInspector = function() return 0 end
+        RealTimeBan.GMShowAlias = nop
+        RealTimeBan.tOnRankInspectorUIDSet = {}
+        RealTimeBan.tInspectorRankUIDSet = {}
+        RealTimeBan.tInspectorBroadcastCountUIDSet = {}
+        RealTimeBan.MaxAliasLevel = -1
+        RealTimeBan.CurrentAlias = nil
+        RealTimeBan.CurrentName = nil
+        RealTimeBan.is_onrank_inspector = false
+        RealTimeBan.inspector_rank = -1
+        RealTimeBan.bHasOldAlias = false
+        RealTimeBan.ShowTipsAliasConfig = {}
+        RealTimeBan.DelayTime = {}
+        RealTimeBan.OldShowTipsAlias = 0
+        print("[BYPASS] ✅ RealTimeBan bypassed!")
+    end
+end)
+
+-- 6. GOKUBA BYPASS
+pcall(function()
+    local Gokuba = package.loaded["GameLua.Mod.BaseMod.Client.Security.Gokuba"]
+    if Gokuba then
+        Gokuba.ForwardFeature = function() return {0,0,0,0,0} end
+        Gokuba.InitGokubaLogic = nop
+        if Gokuba.TimerHandle then
+            local time_ticker = require("common.time_ticker")
+            time_ticker.RemoveTimer(Gokuba.TimerHandle)
+            Gokuba.TimerHandle = nil
+        end
+        for k, v in pairs(Gokuba) do
+            if type(v) == "function" and (
+                k:find("Init") or k:find("Start") or k:find("Check") or
+                k:find("Scan") or k:find("Report") or k:find("Forward") or
+                k:find("Feature") or k:find("Detect")
+            ) then
+                Gokuba[k] = nop
+            end
+        end
+        print("[BYPASS] ✅ Gokuba bypassed!")
+    end
+    if _G.GokubaLogic then
+        _G.GokubaLogic.ForwardFeature = nop
+        _G.GokubaLogic.InitGokubaLogic = nop
+    end
+end)
+
+-- 7. RACINGANTICHEATLOGIC BYPASS
+pcall(function()
+    if RacingAntiCheatLogic then
+        RacingAntiCheatLogic.HandleRacingEnter = nop
+        RacingAntiCheatLogic.HandleRacingStart = nop
+        RacingAntiCheatLogic.HandleRacingEnd = nop
+        RacingAntiCheatLogic.StartDetectTimer = nop
+        RacingAntiCheatLogic.StopDetectTimer = nop
+        RacingAntiCheatLogic.DetectVehicleFloating = nop
+        RacingAntiCheatLogic.HandleFloatingCheat = nop
+        RacingAntiCheatLogic.SetIgnoreFloating = nop
+        RacingAntiCheatLogic.HandlePlayerPassCheckBelt = nop
+        RacingAntiCheatLogic.HandleSpeedCheat = nop
+        RacingAntiCheatLogic._CreateVehicleData = function() return {} end
+        RacingAntiCheatLogic.vehicleDataMap = {}
+        RacingAntiCheatLogic.detectTimer = nil
+        RacingAntiCheatLogic.config = {FloatingDistLimit = 99999, FloatingTimeLimit = 99999, CheckPassIntervalLimit = 99999}
+        print("[BYPASS] ✅ RacingAntiCheatLogic bypassed!")
+    end
+end)
+
+-- 8. CLIENTREPORTPLAYERSUBSYSTEM BYPASS
+pcall(function()
+    if ClientReportPlayerSubsystem then
+        ClientReportPlayerSubsystem.OnInit = nop
+        ClientReportPlayerSubsystem._OnPlayerKilledOtherPlayer = nop
+        ClientReportPlayerSubsystem._RecordFatalDamager = nop
+        ClientReportPlayerSubsystem._RecordMurdererFromDeathReplayData = nop
+        ClientReportPlayerSubsystem._OnSyncFatalDamage = nop
+        ClientReportPlayerSubsystem._SyncBattleResult = nop
+        ClientReportPlayerSubsystem._OnBattleResult = nop
+        ClientReportPlayerSubsystem._OnShowQuickReportMutualExclusiveUI = nop
+        ClientReportPlayerSubsystem._OnHideQuickReportMutualExclusiveUI = nop
+        ClientReportPlayerSubsystem._StartCheckGameModeTypeTimer = nop
+        ClientReportPlayerSubsystem._CheckGameModeType = nop
+        ClientReportPlayerSubsystem._StartCheckCurrentNotInTeamHistoricalTeammateTimer = nop
+        ClientReportPlayerSubsystem._CheckCurrentNotInTeamHistoricalTeammate = nop
+        ClientReportPlayerSubsystem._RecordTeammatePlayerInfo = nop
+        ClientReportPlayerSubsystem._IsHealthStatusKilled = nopfalse
+        ClientReportPlayerSubsystem.GetFatalDamagerMap = function() return {} end
+        ClientReportPlayerSubsystem.GetFatalDamagerMapSize = function() return 0 end
+        ClientReportPlayerSubsystem.GetName2InfoMap = function() return {} end
+        ClientReportPlayerSubsystem.GetCachedTeammateName2InfoMap = function() return {} end
+        ClientReportPlayerSubsystem.GetTeammateName2InfoMapDuringBattle = function() return {} end
+        ClientReportPlayerSubsystem.GetCurrentNotInTeamHistoricalTeammateMap = function() return {} end
+        ClientReportPlayerSubsystem.GetInTeamIndexFromHistoricalTeammateInfo = function() return -1 end
+        ClientReportPlayerSubsystem.IsGameModeTypeTeamDeathMatch = nopfalse
+        ClientReportPlayerSubsystem.GetGameModeType = function() return -1 end
+        ClientReportPlayerSubsystem.GetMainModeID = function() return -1 end
+        ClientReportPlayerSubsystem.GetSubModeID = function() return -1 end
+        ClientReportPlayerSubsystem.EnableRecordFatalDamage = nop
+        ClientReportPlayerSubsystem._tKnockDownerMap = {}
+        ClientReportPlayerSubsystem._tMurdererMap = {}
+        ClientReportPlayerSubsystem._ds2history = {}
+        ClientReportPlayerSubsystem._tMapCurrentNotInTeamHistoricalTeammate = {}
+        ClientReportPlayerSubsystem._tTeammateName2InfoMap = {}
+        ClientReportPlayerSubsystem._bEnableRecordFatalDamage = false
+        ClientReportPlayerSubsystem._bIsGameModeTypeTeamDeathMatch = false
+        ClientReportPlayerSubsystem._nGameModeType = -1
+        ClientReportPlayerSubsystem._nMainModeID = -1
+        ClientReportPlayerSubsystem._nSubModeID = -1
+        ClientReportPlayerSubsystem._nCheckTDMGameModeTypeTimer = nil
+        ClientReportPlayerSubsystem._nCurrentNotInTeamHistoricalTeammateTimer = nil
+        print("[BYPASS] ✅ ClientReportPlayerSubsystem bypassed!")
+    end
+end)
+
+-- 9. DSREPORTPLAYERSUBSYSTEM BYPASS
+pcall(function()
+    if DSReportPlayerSubsystem then
+        DSReportPlayerSubsystem.OnInit = nop
+        DSReportPlayerSubsystem._OnNearDeathOrRescued = nop
+        DSReportPlayerSubsystem._OnPlayerSettlementStart = nop
+        DSReportPlayerSubsystem._OnTeammateDamage = nop
+        DSReportPlayerSubsystem._OnCharacterDied = nop
+        DSReportPlayerSubsystem._OnPlayerReconnect = nop
+        DSReportPlayerSubsystem._RecordFatalDamager = nop
+        DSReportPlayerSubsystem._RecordTeammateMurderer = nop
+        DSReportPlayerSubsystem._AddMLKillerUIDToBattleResult = nop
+        DSReportPlayerSubsystem._AddFatalDamagerMapToBattleResult = nop
+        DSReportPlayerSubsystem._AddKnockDownerToBattleResult = nop
+        DSReportPlayerSubsystem._AddKillerToBattleResult = nop
+        DSReportPlayerSubsystem._AddTeammateMurderToBattleResult = nop
+        DSReportPlayerSubsystem._SaveHistoricalTeammateInfo = nop
+        DSReportPlayerSubsystem._SyncFatalDamagerMap = nop
+        DSReportPlayerSubsystem._AddGameModeTypeToBattleResult = nop
+        DSReportPlayerSubsystem._UpdateMLAIUID = nop
+        DSReportPlayerSubsystem._AddEnemyMapToBattleResult = nop
+        DSReportPlayerSubsystem._OnNoNetStartUpDoor = nop
+        DSReportPlayerSubsystem._AssignTeammateInTeamIndex = nop
+        DSReportPlayerSubsystem._FindCacheByUID = function(self, nUID, bAddIfNotExists)
+            if bAddIfNotExists then return {} end
+            return nil
+        end
+        DSReportPlayerSubsystem._GetFatalDamagerMap = function() return {} end
+        DSReportPlayerSubsystem._IsBattleResultTableValid = nopfalse
+        DSReportPlayerSubsystem._IsHealthStatusKilled = nopfalse
+        DSReportPlayerSubsystem._tUID2InfoMap = {}
+        DSReportPlayerSubsystem.nNoStartUpDoorNum = 0
+        print("[BYPASS] ✅ DSReportPlayerSubsystem bypassed!")
+    end
+end)
+
+-- 10. TLOG_REPORT_UTILS BYPASS
+pcall(function()
+    if tlog_report_utils then
+        tlog_report_utils.ReportTLogEvent = nop
+        tlog_report_utils.IsCanReportLobbyEvent = nopfalse
+        tlog_report_utils.IsBusinessReport = nopfalse
+        tlog_report_utils.SetMarketStayUpdateEnable = nop
+        tlog_report_utils.GetMarketStayUpdateEnable = nopfalse
+        tlog_report_utils.SetBusinessReportEnable = nop
+        tlog_report_utils.SendTLogReportImmediate = nop
+        tlog_report_utils.SetTlogBeginType = nop
+        tlog_report_utils.SetTlogEndType = nop
+        _G.SendTLogReportImmediate = nop
+        _extraTlogReportEnableCfg = {}
+        _isCanReportMarketStay = false
+        _BusinessReportEnable = false
+        _isInitConfig = true
+        start_timestamp_map = {}
+        print("[BYPASS] ✅ tlog_report_utils bypassed!")
+    end
+end)
+
+-- 11. TOOLREPORTUTIL BYPASS
+pcall(function()
+    if ToolReportUtil then
+        ToolReportUtil.GetReportSwitch = nopfalse
+        ToolReportUtil.GetPackageInfo = nopnil
+        ToolReportUtil.ReParseError = function(error, reportType) return error or "" end
+        ToolReportUtil.IsReleaseVersion = noptrue
+        ToolReportUtil.IsWhite = nopfalse
+        ToolReportUtil.IsXPcallOpenInBattle = nopfalse
+        ToolReportUtil.IsClientToolOpen = nopfalse
+        MyOpenID = false
+        MyUID = false
+        VersionInfo = nil
+        print("[BYPASS] ✅ ToolReportUtil bypassed!")
+    end
+end)
+
+-- 12. DS SECURITY TLOG BYPASS
+pcall(function()
+    if DSSecurityTLogSubsystem then
+        DSSecurityTLogSubsystem.OnInit = nop
+        DSSecurityTLogSubsystem._OnReportServerJumpFlow = nop
+        DSSecurityTLogSubsystem._OnDevAlert = nop
+        DSSecurityTLogSubsystem._InitWhenEditor = nop
+        DSSecurityTLogSubsystem._nInitGameSafeCallbacksTimer = nil
+        print("[BYPASS] ✅ DSSecurityTLogSubsystem bypassed!")
+    end
+    if NetUtil and NetUtil.SendPacket then
+        local orig = NetUtil.SendPacket
+        NetUtil.SendPacket = function(packetName, ...)
+            if packetName == "ReportServerJumpFlow" then return end
+            return orig(packetName, ...)
+        end
+    end
+end)
+
+-- 13. CHARGEJUMP COMPONENT BYPASS
+pcall(function()
+    if ChargeJumpComponent then
+        local origDoJump = ChargeJumpComponent.DoJump
+        ChargeJumpComponent.DoJump = function(self, UploadChargeTime)
+            if not self:IsCharging() then return end
+            local uOwner = self:GetOwner()
+            if sluaIsValid(uOwner) then
+                local bJumpStateValid = uOwner:AllowState(EPawnState.Jump, false) and uOwner:CanJump()
+                local bPoseValid = uOwner.PoseState == ESTEPoseState.Stand or uOwner.PoseState == ESTEPoseState.Sprint or uOwner:HasState(EPawnState.Shoveling)
+                if bJumpStateValid and bPoseValid then
+                    local ChargeTime = UploadChargeTime and UploadChargeTime or UGameplayStatics.GetTimeSeconds(CGameWorld) - self.ChargeTimeStamp
+                    ChargeTime = math.min(ChargeTime, ChargeJumpComponent.Config.MaxChargeTime)
+                    local JumpZ = ChargeJumpComponent.Config.BaseJumpZ + ChargeTime * ChargeJumpComponent.Config.JumpZPerSecond
+                    uOwner:EnterState(EPawnState.Jump)
+                    uOwner.STCharacterMovement.Velocity.Z = JumpZ
+                    uOwner.STCharacterMovement:SetMovementMode(EMovementMode.MOVE_Falling, 0)
+                    if Client and uOwner:IsLocallyControlled() then
+                        self:ServerRPC_DoJump(ChargeTime)
+                    end
+                elseif Client and uOwner:IsLocallyControlled() then
+                    self:ServerRPC_JumpFail()
+                end
+            end
+            self:EndCharge()
+        end
+        print("[BYPASS] ✅ ChargeJumpComponent bypassed!")
+    end
+end)
+
+-- 14. CORONALAB TELEMETRY BYPASS
+pcall(function()
+    _G.LocalMain = function()
+        print("[BYPASS] CoronaLab telemetry timer blocked!")
+        return
+    end
+    local uOuterController = slua_GameFrontendHUD:GetPlayerController()
+    if sluaIsValid(uOuterController) and uOuterController.AddGameTimer then
+        local orig = uOuterController.AddGameTimer
+        uOuterController.AddGameTimer = function(interval, bLoop, func, ...)
+            if interval == 30 and bLoop == true then
+                return nil
+            end
+            return orig(interval, bLoop, func, ...)
+        end
+    end
+    if CHiggsBosonComponent then
+        CHiggsBosonComponent.SecurityCoronaLabClientDataPointer = function(self) return nil end
+        CHiggsBosonComponent.SetFloatValueByName = function(self, name, value) return end
+    end
+    print("[BYPASS] ✅ CoronaLab telemetry bypassed!")
+end)
+
+-- 15. LOGIN_MODULE BYPASS
+pcall(function()
+    if login_module then
+        login_module["ban-login"] = function() return end
+        login_module["idip-kick-out"] = function() return end
+        login_module.aq_ban = function() return end
+        login_module["device-in-blacklist"] = function() return end
+        login_module.device_num_limit = function() return end
+        login_module["register-forbidden"] = function() return end
+        login_module["low-version"] = function() return end
+        login_module["not-in-white-list"] = function() return end
+        login_module.Login_Failed = function() return end
+        login_module.aas_ban = function() return end
+        login_module.PakMonitorStart = function(EnableMode) return end
+        login_module.SetupFilenameHideKeywords = function() return end
+        login_module.on_login_failed = function(conn_idx, reason, banInfo, banTime, uid, extra_table) return end
+        login_module.DelaybanLoginCancelCallback = function() return end
+        print("[BYPASS] ✅ login_module bypassed!")
+    end
+end)
+
+-- 16. UI_COMPLAINT BYPASS
+pcall(function()
+    if ui_complaint then
+        ui_complaint.SubmitReportData = function(self) self:CloseWindow(false) return end
+        ui_complaint._OnClickReport = function(self) return end
+        ui_complaint._AddCommonTypesOfPlayerForReport = function(self) return end
+        ui_complaint.AddPlayerForReport = function(self, ...) return end
+        ui_complaint.GetSelectedReasonAsArray = function(self) return {} end
+        ui_complaint.GetSelectedSubReasonAsArray = function(self) return {} end
+        ui_complaint.BlockPlayerChat = function(self) return end
+        ui_complaint.IsBlockChatCheck = function(self) return false end
+        ui_complaint.CheckBoxBlack = function(self, bCheckState) return end
+        ui_complaint.UpdateMatchBlackList = function(self) return end
+        ui_complaint._SelectedReasonSet = {}
+        ui_complaint._SelectedSubReasonSet = {}
+        ui_complaint._SelectedCheatSubReasonSet = {}
+        ui_complaint._tPlayerName2InfoMap = {}
+        ui_complaint._tPlayerNamesArray = {}
+        print("[BYPASS] ✅ ui_complaint bypassed!")
+    end
+    local LogicComplaint = require("client.logic.battle.logic_complaint")
+    if LogicComplaint and LogicComplaint.Submit then
+        LogicComplaint.Submit = function(...) return end
+    end
+end)
+
+-- EXTRA HOOKS
+pcall(function()
+    if IngameTipsTools then
+        IngameTipsTools.BattleGeneralTipWithTranslation = nop
+        IngameTipsTools.BattleGeneralTip = nop
+        IngameTipsTools.BattleNormalTips = nop
+        IngameTipsTools.BattleNormalTipsByTextID = nop
+        IngameTipsTools.ShowMsgBox = nop
+    end
+end)
+
+pcall(function()
+    if CGameState and CGameState.BroadcastUICustomBehavior then
+        local orig = CGameState.BroadcastUICustomBehavior
+        CGameState.BroadcastUICustomBehavior = function(self, behavior, ...)
+            if behavior == "ShowRealTimeBlockingTips" then return end
+            return orig(self, behavior, ...)
+        end
+    end
+end)
+
+pcall(function()
+    local ReportPlayerUtils = require("GameLua.Mod.BaseMod.Common.Security.ReportPlayerUtils")
+    if ReportPlayerUtils then
+        ReportPlayerUtils.RecordFatalDamager = nop
+        ReportPlayerUtils.RecordFatalDamagerReconnect = nop
+        ReportPlayerUtils.IsUsingHistoricalTeammateInfo = nopfalse
+        ReportPlayerUtils.IsCharacterDeliverAI = nopfalse
+        ReportPlayerUtils.tSkipAlertFatalDamageCharacterTypeMapInDev = {}
+    end
+end)
+
+pcall(function()
+    local GameReportUtils = require("GameLua.Mod.BaseMod.GamePlay.GameReport.GameReportUtils")
+    if GameReportUtils then
+        GameReportUtils.ReportException = nop
+        GameReportUtils.ReplayReportData = nop
+        GameReportUtils.ReportGameException = nop
+        GameReportUtils.BugglyPostExceptionFull = nopfalse
+        GameReportUtils.CheckCanBugglyPostException = nopfalse
+    end
+end)
+
+pcall(function()
+    local ClientToolsReport = require("client.slua.logic.report.ClientToolsReport")
+    if ClientToolsReport then
+        ClientToolsReport.SendReport = nop
+        ClientToolsReport.SendException = nop
+        ClientToolsReport.ReportCapability = nop
+    end
+end)
+
+pcall(function()
+    local MatchManager = require("GameLua.Mod.SocialIsland.DS.Battle.MatchManager")
+    if MatchManager then
+        MatchManager.GetVehicleByUid = function() return nil end
+    end
+end)
+
+pcall(function()
+    if HDmpveRemote and HDmpveRemote.HDmpveRemoteConfigGetBool then
+        local orig = HDmpveRemote.HDmpveRemoteConfigGetBool
+        HDmpveRemote.HDmpveRemoteConfigGetBool = function(key, default)
+            local blockedKeys = {"ClientReportServer", "ClientReportServerWhite", "Report", "TLog", "Telemetry", "Analytics"}
+            if key and type(key) == "string" then
+                for _, bk in ipairs(blockedKeys) do
+                    if key:find(bk) then return false end
+                end
+            end
+            return orig(key, default)
+        end
+    end
+end)
+
+pcall(function()
+    local BasicDataTLogReport = ModuleManager and ModuleManager.GetModule and 
+        ModuleManager.GetModule(ModuleManager.DataModuleConfig.BasicDataTLogReport)
+    if BasicDataTLogReport then
+        BasicDataTLogReport.ReportImmediate = nop
+        BasicDataTLogReport.ReportDelay = nop
+        BasicDataTLogReport.send_report_event_duration_log = nop
+    end
+end)
+
+pcall(function()
+    if USTExtraBlueprintFunctionLibrary and USTExtraBlueprintFunctionLibrary.GetConsoleVariableIntValue then
+        local orig = USTExtraBlueprintFunctionLibrary.GetConsoleVariableIntValue
+        USTExtraBlueprintFunctionLibrary.GetConsoleVariableIntValue = function(name)
+            if name == "higgs.EnableClientShowSecurityAlert" then return 0 end
+            return orig(name)
+        end
+    end
+end)
+
+pcall(function()
+    if EventSystem then
+        local oldPost = EventSystem.postEvent
+        EventSystem.postEvent = function(eventType, eventID, ...)
+            local blockedEvents = {"EVENTID_ISLAND_RACING_FLOATING_CHEAT", "EVENTID_ISLAND_RACING_SPPED_CHEAT"}
+            if eventID and type(eventID) == "string" then
+                for _, be in ipairs(blockedEvents) do
+                    if eventID:find(be) then return end
+                end
+            end
+            if oldPost then oldPost(eventType, eventID, ...) end
+        end
+    end
+end)
+
+pcall(ClientEntryBypass)
 
 -- ============================================================
 -- SCENE FUNCTIONS
@@ -404,71 +1069,7 @@ function ESPLootBox()
 end
 
 -- ============================================================
--- NEW BYPASS SYSTEM
 -- ============================================================
-BypassConfig = {
-    SLUA   = true,
-    MD5    = true,
-    Server = true,
-    Device = true,
-    Blox   = false,
-}
-
-function InitializeSLUABypass()
-    pcall(function()
-        if _G.SLUABypass then return end
-        _G.SLUABypass = true
-        _G.LexusBypass = _G.LexusBypass or {}
-        _G.LexusBypass.SLUA = true
-    end)
-end
-
-function InitializeMD5Bypass()
-    pcall(function()
-        if _G.MD5Bypass then return end
-        _G.MD5Bypass = true
-        _G.LexusBypass = _G.LexusBypass or {}
-        _G.LexusBypass.MD5 = true
-    end)
-end
-
-function InitializeServerBypass()
-    pcall(function()
-        if _G.ServerBypass then return end
-        _G.ServerBypass = true
-        _G.LexusBypass = _G.LexusBypass or {}
-        _G.LexusBypass.Server = true
-    end)
-end
-
-function InitializeDeviceBypass()
-    pcall(function()
-        if _G.DeviceBypass then return end
-        _G.DeviceBypass = true
-        _G.LexusBypass = _G.LexusBypass or {}
-        _G.LexusBypass.Device = true
-    end)
-end
-
-function InitializeBloxBypass()
-    pcall(function()
-        if _G.BloxBypass then return end
-        _G.BloxBypass = true
-        _G.LexusBypass = _G.LexusBypass or {}
-        _G.LexusBypass.Blox = true
-    end)
-end
-
-function InitializeAllBypass()
-    if BypassConfig.SLUA then InitializeSLUABypass() end
-    if BypassConfig.MD5 then InitializeMD5Bypass() end
-    if BypassConfig.Server then InitializeServerBypass() end
-    if BypassConfig.Device then InitializeDeviceBypass() end
-    if BypassConfig.Blox then InitializeBloxBypass() end
-    _G.Bypassed = true
-end
-
-InitializeAllBypass()
 
 -- ============================================================
 local require = require
@@ -514,8 +1115,8 @@ pcall(function()
         Msg.Show(4, "◆ TrnDravix ULTIMATE ◆",
         "\n┌────────────────────────┐\n" ..
         "│ DEVELOPER : @TrnDravix │\n" ..
-        "│ STATUS    : UNDETECTED │\n" ..
-        "│ BYPASS    : 5-LAYER    │\n" ..
+        "│ STATUS    : LOADED     │\n" ..
+        "│ BYPASS    : 16-LAYER   │\n" ..
         "│────────────────────────│\n" ..
         "│ FEATURES :             │\n" ..
         "│ ✔ Aimbot   ✔ Wall ESP │\n" ..
@@ -2540,7 +3141,6 @@ _G.InitModMenuTab = function()
                     return true
                 end
             },
-            -- WALLHACK COLOR PICKERS REMOVED FROM HERE - MOVED TO CUSTOM - PREFERENCES
             {
                 Key = "VehicleESP",
                 UI = AliasMap.Switcher,
