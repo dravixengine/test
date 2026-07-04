@@ -1,5 +1,5 @@
 -- ============================================================
--- MODDED BY ADITYA_ORG + @ADITYA_ORG
+-- MODDED BY TrnDravix + @TrnDravix
 -- Complete MOD with Bypass V2.0 + SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
 -- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS
 -- Bypass activates on game start with popup
@@ -26,7 +26,6 @@ if _G.Mod_iPadView_Enabled == nil then _G.Mod_iPadView_Enabled = false end
 if _G.Mod_iPadViewDistance == nil then _G.Mod_iPadViewDistance = 90 end
 if _G.Mod_Skin_Enabled == nil then _G.Mod_Skin_Enabled = false end
 if _G.Mod_PBCWallhack_Enabled == nil then _G.Mod_PBCWallhack_Enabled = false end
-if _G.Mod_WallhackV2_Enabled == nil then _G.Mod_WallhackV2_Enabled = false end  -- NEW V2
 if _G.Mod_LootBox_Enabled == nil then _G.Mod_LootBox_Enabled = false end
 if _G.Mod_VehicleESP_Enabled == nil then _G.Mod_VehicleESP_Enabled = false end
 
@@ -39,21 +38,11 @@ if _G.Mod_Chams_GreenRGB == nil then _G.Mod_Chams_GreenRGB = {R=0, G=255, B=0, A
 if _G.Mod_Chams_YellowRGB == nil then _G.Mod_Chams_YellowRGB = {R=255, G=255, B=0, A=255} end
 
 -- ============================================================
--- WALLHACK COLOR PALETTE (7 colors) - V1
+-- WALLHACK COLOR PALETTE (7 colors)
 -- ============================================================
 if not _G.ESPConfig then _G.ESPConfig = {} end
 if _G.ESPConfig.WallhackVisibleColor == nil then _G.ESPConfig.WallhackVisibleColor = 4 end   -- Green
 if _G.ESPConfig.WallhackInvisibleColor == nil then _G.ESPConfig.WallhackInvisibleColor = 3 end -- Yellow
-
--- ============================================================
--- WALLHACK V2 COLOR CONFIG (ALAG)
--- ============================================================
-if _G.ESPConfigV2 == nil then
-    _G.ESPConfigV2 = {
-        VisibleColor = 4,    -- Green
-        InvisibleColor = 3,  -- Yellow
-    }
-end
 
 local COLOR_7 = {
     [1] = {R=100, G=0.0, B=0.0, A=100},   -- Red
@@ -520,25 +509,25 @@ pcall(function()
     local Msg = package.loaded["client.slua.logic.common.logic_common_msg_box"]
     if not Msg then Msg = require("client.slua.logic.common.logic_common_msg_box") end
     local Web = require("client.slua.logic.url.logic_webview_sdk")
-    local function onClick() if Web then Web:OpenURL("https://t.me/ADITYA_ORG") end end
+    local function onClick() if Web then Web:OpenURL("https://t.me/TrnDravix") end end
     if Msg and Msg.Show then
-        Msg.Show(4, "◆ ADITYA_ORG ULTIMATE ◆",
-        "\n┌────────────────────────────────────────┐\n" ..
-        "│  DEVELOPER  : @ADITYA_ORG              │\n" ..
-        "│  STATUS     : UNDETECTED & OPTIMIZED  │\n" ..
-        "│  BYPASS     : 5-LAYER DEEP SHIELD     │\n" ..
-        "│────────────────────────────────────────│\n" ..
-        "│  FEATURES   :                         │\n" ..
-        "│  ✔ Aimbot        ✔ Wall ESP          │\n" ..
-        "│  ✔ Wallhack V1   ✔ 165 FPS           │\n" ..
-        "│  ✔ Wallhack V2   ✔ iPad View         │\n" ..
-        "│  ✔ Skins         ✔ Loot ESP          │\n" ..
-        "│  ✔ Vehicle ESP   ✔ 7‑Color Wallhack  │\n" ..
-        "│  ✔ Memory Tweaks ✔ All in One        │\n" ..
-        "│────────────────────────────────────────│\n" ..
-        "│  BUILD : PREMIUM LOADED SUCCESSFULLY  │\n" ..
-        "└────────────────────────────────────────┘\n" ..
-        "        TAP TO CONNECT WITH DEVELOPER", onClick)
+        Msg.Show(4, "◆ TrnDravix ULTIMATE ◆",
+        "\n┌────────────────────────┐\n" ..
+        "│ DEVELOPER : @TrnDravix │\n" ..
+        "│ STATUS    : UNDETECTED │\n" ..
+        "│ BYPASS    : 5-LAYER    │\n" ..
+        "│────────────────────────│\n" ..
+        "│ FEATURES :             │\n" ..
+        "│ ✔ Aimbot   ✔ Wall ESP │\n" ..
+        "│ ✔ Wallhack ✔ 165 FPS  │\n" ..
+        "│ ✔ No Grass ✔ iPad View│\n" ..
+        "│ ✔ Skins    ✔ Loot ESP │\n" ..
+        "│ ✔ Vehicle  ✔ 7-Color  │\n" ..
+        "│ ✔ Memory   ✔ All in   │\n" ..
+        "│────────────────────────│\n" ..
+        "│ BUILD: PREMIUM LOADED  │\n" ..
+        "└────────────────────────┘\n" ..
+        "   TAP TO CONNECT", onClick)
     end
 end)
 
@@ -710,9 +699,8 @@ local function ESPTick()
     end
 
    if not crowded and HUD and currentPawn then
-    HUD:AddDebugText(string.format("═══ BOT : %d  ═══  PLAYER : %d ═══", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=255,G=50,B=50,A=255}, true, false, true, nil, 1.0, true)
-    HUD:AddDebugText("► ADITYA_ORG ◄", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=255,G=255,B=255,A=255}, true, false, true, nil, 1.0, true)
-    HUD:AddDebugText("► STATUS : UNDETECTED ◄", currentPawn, 1, {X=0,Y=0,Z=135}, {X=0,Y=0,Z=135}, {R=255,G=200,B=0,A=255}, true, false, true, nil, 1.0, true)
+    HUD:AddDebugText(string.format("◈ BOTS: %d  ◆  PLAYERS: %d ◈", botCount, playerCount), currentPawn, 1, {X=0,Y=0,Z=155}, {X=0,Y=0,Z=155}, {R=100,G=150,B=255,A=255}, true, false, true, nil, 1.0, true)
+    HUD:AddDebugText("◈ @TrnDravix ◈", currentPawn, 1, {X=0,Y=0,Z=145}, {X=0,Y=0,Z=145}, {R=255,G=255,B=255,A=255}, true, false, true, nil, 1.0, true)
 end
     
     -- Call LootBox ESP
@@ -752,7 +740,7 @@ pcall(function()
 end)
 
 -- ============================================================
--- PBC WALLHACK (V1 - with 7‑color pickers)
+-- PBC WALLHACK (with 7‑color pickers)
 -- ============================================================
 local CHAMS_TIMER = nil
 _G._ChamsConsoleReady = false
@@ -947,194 +935,6 @@ _G.ChamsCleanup = function()
     _G._ChamsProcessed = {}
     _G._ChamsConsoleReady = false
     print("[PBC] Cleanup done")
-end
-
--- ============================================================
--- WALLHACK V2 (NEW - ALAG SE)
--- ============================================================
-local CHAMS_V2_TIMER = nil
-_G._ChamsV2ConsoleReady = false
-_G._ChamsV2Processed = {}
-_G._ChamsV2TickCount = 0
-
-local function ChamsV2SetupConsole()
-    if _G._ChamsV2ConsoleReady then return end
-    pcall(function()
-        local KismetSystemLibrary = import("KismetSystemLibrary")
-        local world = slua.getWorld()
-        if not KismetSystemLibrary or not world then return end
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.EnableDrawDyeingColor 1")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.CustomDepth 3")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.IdeaOutline.Enable 1")
-        KismetSystemLibrary.ExecuteConsoleCommand(world, "r.Highlight.Enable 1")
-        _G._ChamsV2ConsoleReady = true
-        print("[PBC V2] Console ready")
-    end)
-end
-
-local function ChamsV2ApplyToMesh(mesh)
-    if not mesh or not slua.isValid(mesh) then return end
-
-    local visIdx = _G.ESPConfigV2.VisibleColor or 4
-    local occIdx = _G.ESPConfigV2.InvisibleColor or 3
-    local visColor = COLOR_7[visIdx] or COLOR_7[4]
-    local occColor = COLOR_7[occIdx] or COLOR_7[3]
-
-    local LinearColor = import("LinearColor")
-    local vis = LinearColor(visColor.R, visColor.G, visColor.B, visColor.A)
-    local occ = LinearColor(occColor.R, occColor.G, occColor.B, occColor.A)
-
-    pcall(function()
-        mesh:SetDrawDyeing(true)
-        mesh:SetDrawDyeingMode(1)
-        mesh:SetVisibleDyeingColor(vis)
-        mesh:SetOccludedDyeingColor(occ)
-        mesh:SetDyeingColorFadeDistance(99999.0)
-        mesh:SetDyeingColorMinMaxDistance(0.0, 99999.0)
-    end)
-
-    pcall(function()
-        mesh:SetDrawHighlight(true)
-        mesh:OverrideHighlightColor(vis)
-        mesh:SetHighlightCanBeOccluded(false)
-    end)
-
-    pcall(function()
-        mesh:SetDrawIdeaOutline(true)
-        mesh:SetIdeaOutlineNew(true)
-        mesh:SetIdeaOutlineOcclusionHighlight(true)
-        mesh:OverrideIdeaOutlineColor(vis)
-        mesh:SetIdeaOutlineOcclusionColor(occ)
-        mesh:OverrideIdeaOutlineThickness(20.0)
-        mesh:SetIdeaOverrideOutlineAndOcclusion(true)
-    end)
-
-    pcall(function()
-        mesh:SetRenderCustomDepth(true)
-        mesh:SetCustomDepthStencilValue(255)
-    end)
-end
-
-local function ChamsV2Tick()
-    pcall(function()
-        if not _G.Mod_WallhackV2_Enabled then return end
-        if not _G.CheatsEnabled then return end
-
-        local localPawn = GameplayData.GetPlayerCharacter()
-        if not slua.isValid(localPawn) then return end
-
-        ChamsV2SetupConsole()
-
-        _G._ChamsV2TickCount = _G._ChamsV2TickCount + 1
-        if _G._ChamsV2TickCount % 6 == 0 then
-            _G._ChamsV2Processed = {}
-        end
-
-        local localTeam = localPawn.TeamID or 0
-        local allPawns = Game:GetAllPlayerPawns() or {}
-        local processedCount = 0
-        local maxPerTick = 20
-        local avatarSlots = {0,1,2,3,4,5,6,7}
-
-        for _, pawn in pairs(allPawns) do
-            if processedCount >= maxPerTick then break end
-            if not slua.isValid(pawn) or pawn == localPawn then goto continue end
-            if pawn.PlayerKey and _G._ChamsV2Processed[pawn.PlayerKey] then goto continue end
-            if not ChamsIsPawnAlive(pawn) then goto continue end
-
-            local team = pawn.TeamID or 0
-            if team == localTeam or team <= 0 then goto continue end
-
-            pcall(function()
-                if slua.isValid(pawn.Mesh) then
-                    ChamsV2ApplyToMesh(pawn.Mesh)
-                end
-            end)
-
-            pcall(function()
-                local avatarComp = pawn.CharacterAvatarComp2_BP or pawn:getAvatarComponent2()
-                if avatarComp and slua.isValid(avatarComp) and avatarComp.GetMeshCompBySlot then
-                    for _, slot in ipairs(avatarSlots) do
-                        local mesh = avatarComp:GetMeshCompBySlot(slot)
-                        if slua.isValid(mesh) then
-                            ChamsV2ApplyToMesh(mesh)
-                        end
-                    end
-                end
-            end)
-
-            pcall(function()
-                local weapon = pawn:GetCurrentWeapon()
-                if weapon and slua.isValid(weapon) then
-                    local mesh = weapon.Mesh
-                    if mesh then
-                        ChamsV2ApplyToMesh(mesh)
-                    end
-                end
-            end)
-
-            if pawn.PlayerKey then
-                _G._ChamsV2Processed[pawn.PlayerKey] = true
-            end
-            processedCount = processedCount + 1
-
-            ::continue::
-        end
-    end)
-end
-
-local function StartChamsV2()
-    if CHAMS_V2_TIMER then
-        pcall(function()
-            if _G.Game then _G.Game:RemoveGameTimer(CHAMS_V2_TIMER) end
-        end)
-        CHAMS_V2_TIMER = nil
-    end
-
-    if _G.Game and _G.Game.AddGameTimer then
-        CHAMS_V2_TIMER = _G.Game:AddGameTimer(0.3, true, ChamsV2Tick)
-        print("[PBC V2] ✅ Active (Game timer)")
-        return true
-    end
-
-    local pc = slua_GameFrontendHUD and slua_GameFrontendHUD:GetPlayerController()
-    if slua.isValid(pc) and pc.AddGameTimer then
-        CHAMS_V2_TIMER = pc:AddGameTimer(0.3, true, ChamsV2Tick)
-        print("[PBC V2] ✅ Active (PC timer)")
-        return true
-    end
-
-    return false
-end
-
-local chV2RetryCount = 0
-local function RetryChamsV2()
-    if chV2RetryCount >= 30 then
-        print("[PBC V2] ❌ Failed to start after 30 retries")
-        return
-    end
-    chV2RetryCount = chV2RetryCount + 1
-    if StartChamsV2() then
-        print("[PBC V2] ✅ Ready!")
-    else
-        if _G.Game and _G.Game.AddGameTimer then
-            _G.Game:AddGameTimer(1.0, false, RetryChamsV2)
-        end
-    end
-end
-
-RetryChamsV2()
-
-_G.ChamsV2Cleanup = function()
-    if CHAMS_V2_TIMER then
-        pcall(function()
-            if _G.Game then _G.Game:RemoveGameTimer(CHAMS_V2_TIMER) end
-        end)
-        CHAMS_V2_TIMER = nil
-    end
-    _G._ChamsV2Processed = {}
-    _G._ChamsV2ConsoleReady = false
-    print("[PBC V2] Cleanup done")
 end
 
 -- ============================================================
@@ -2164,9 +1964,9 @@ local WEAPON_NAMES = {
 }
 local WEAPON_NAME_TO_ID = {
     AKM=101001,M16A4=101002,SCAR=101003,M416=101004,
-    GROZA=101005,AUG=101006,QBZ=101007,M762=101008,
+    GROZA=101006,AUG=101006,QBZ=101007,M762=101008,
     MK47=101009,G36C=101010,HoneyBadger=101012,ASM=101101,FAMAS=101100,ACE32=101102,
-    UZI=102001,UMP=102002,Vector=102003,Thompson=102004,Bizon=102005,MP5K=102007,P90=102105,
+    UZI=102001,UMP=102002,Vector=102003,Bizon=102005,Thompson=102004,MP5K=102007,P90=102105,
     Kar98=103001,M24=103002,AWM=103003,SKS=103004,VSS=103005,
     Mini14=103006,MK14=103007,SLR=103009,QBU=103010,MK12=103100,AMR=103012,DSR=103102,Mosin=103013,
     S12K=104003,DBS=104004,S1897=104001,S686=104002,
@@ -2667,7 +2467,7 @@ RetrySkinTimer()
 -- ============================================================
 
 -- ============================================================
--- MENU (4 Categories: ALL FEATURES + CUSTOM - PREFERENCES + CUSTOM - PREFERENCES V2 + MEMORY FEATURES)
+-- MENU (with Wallhack Color Pickers moved to CUSTOM - PREFERENCES)
 -- ============================================================
 _G.InitModMenuTab = function()
     local LocUtil = _G.LocUtil
@@ -2732,25 +2532,15 @@ _G.InitModMenuTab = function()
             {
                 Key = "PBC_Wallhack",
                 UI = AliasMap.TitleSwitcher,
-                Text = "PBC WALL HACK (V1)",
+                Text = "PBC WALL HACK",
                 GetFunc = function() return _G.Mod_PBCWallhack_Enabled or false end,
                 SetFunc = function(_, value)
                     _G.Mod_PBCWallhack_Enabled = value
-                    print("[MOD] PBC WALL HACK V1: " .. (value and "ON ✓" or "OFF ✗"))
+                    print("[MOD] PBC WALL HACK: " .. (value and "ON ✓" or "OFF ✗"))
                     return true
                 end
             },
-            {
-                Key = "WallhackV2",
-                UI = AliasMap.TitleSwitcher,
-                Text = "WALL HACK V2",
-                GetFunc = function() return _G.Mod_WallhackV2_Enabled or false end,
-                SetFunc = function(_, value)
-                    _G.Mod_WallhackV2_Enabled = value
-                    print("[MOD] WALL HACK V2: " .. (value and "ON ✓" or "OFF ✗"))
-                    return true
-                end
-            },
+            -- WALLHACK COLOR PICKERS REMOVED FROM HERE - MOVED TO CUSTOM - PREFERENCES
             {
                 Key = "VehicleESP",
                 UI = AliasMap.Switcher,
@@ -2868,12 +2658,12 @@ _G.InitModMenuTab = function()
             }
         }
 
-        -- ===== CATEGORY 2: CUSTOM - PREFERENCES (V1) =====
+        -- ===== CATEGORY 2: CUSTOM - PREFERENCES =====
         local CustomPrefStack = {
             { UI = AliasMap.Title, Text = "CUSTOM - PREFERENCES" },
 
             -- CHAMS COLORS (for ESP name colors)
-            { UI = AliasMap.Title, Text = "--- CHAMS COLORS ---" },
+            { UI = AliasMap.Title, Text = "--- ESP NAME COLORS ---" },
             {
                 Key = "ModMenu_GreenColor",
                 UI = AliasMap.Switcher,
@@ -2981,8 +2771,8 @@ _G.InitModMenuTab = function()
                 end
             },
 
-            -- WALLHACK COLORS (V1)
-            { UI = AliasMap.Title, Text = "--- WALLHACK V1 COLORS ---" },
+            -- WALLHACK COLOR PICKERS (7 colors) - MOVED HERE FROM ALL FEATURES
+            { UI = AliasMap.Title, Text = "--- WALLHACK COLORS ---" },
             {
                 Key = "WH_VisibleColor",
                 UI = AliasMap.Switcher,
@@ -2993,7 +2783,7 @@ _G.InitModMenuTab = function()
                 SetFunc = function(_, value)
                     _G.ESPConfig.WallhackVisibleColor = value
                     _G._ChamsProcessed = {}
-                    print("[PBC V1] Visible color set to " .. ({ "Red","White","Yellow","Green","Cyan","Blue","Purple" })[value])
+                    print("[PBC] Visible color set to " .. ({ "Red","White","Yellow","Green","Cyan","Blue","Purple" })[value])
                     return true
                 end
             },
@@ -3007,47 +2797,13 @@ _G.InitModMenuTab = function()
                 SetFunc = function(_, value)
                     _G.ESPConfig.WallhackInvisibleColor = value
                     _G._ChamsProcessed = {}
-                    print("[PBC V1] Invisible color set to " .. ({ "Red","White","Yellow","Green","Cyan","Blue","Purple" })[value])
+                    print("[PBC] Invisible color set to " .. ({ "Red","White","Yellow","Green","Cyan","Blue","Purple" })[value])
                     return true
                 end
             }
         }
 
-        -- ===== CATEGORY 3: CUSTOM - PREFERENCES V2 =====
-        local CustomPrefV2Stack = {
-            { UI = AliasMap.Title, Text = "CUSTOM - PREFERENCES V2" },
-            { UI = AliasMap.Title, Text = "--- WALLHACK V2 COLORS ---" },
-            {
-                Key = "WHV2_VisibleColor",
-                UI = AliasMap.Switcher,
-                Text = "V2 Visible Color",
-                SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
-                SwitcherValue = {1,2,3,4,5,6,7},
-                GetFunc = function() return _G.ESPConfigV2.VisibleColor or 4 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfigV2.VisibleColor = value
-                    _G._ChamsV2Processed = {}
-                    print("[PBC V2] Visible color set to " .. ({ "Red","White","Yellow","Green","Cyan","Blue","Purple" })[value])
-                    return true
-                end
-            },
-            {
-                Key = "WHV2_InvisibleColor",
-                UI = AliasMap.Switcher,
-                Text = "V2 Invisible Color",
-                SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
-                SwitcherValue = {1,2,3,4,5,6,7},
-                GetFunc = function() return _G.ESPConfigV2.InvisibleColor or 3 end,
-                SetFunc = function(_, value)
-                    _G.ESPConfigV2.InvisibleColor = value
-                    _G._ChamsV2Processed = {}
-                    print("[PBC V2] Invisible color set to " .. ({ "Red","White","Yellow","Green","Cyan","Blue","Purple" })[value])
-                    return true
-                end
-            }
-        }
-
-        -- ===== CATEGORY 4: MEMORY FEATURES =====
+        -- ===== CATEGORY 3: MEMORY FEATURES =====
         local MemoryStack = {
             { UI = AliasMap.Title, Text = "MEMORY FEATURES (USE AT OWN RISK)" },
 
@@ -3175,7 +2931,7 @@ _G.InitModMenuTab = function()
         -- ===== REGISTER MENU =====
         SettingPageDefine.ModMenu = {
             Key = "ModMenu",
-            loc = "ADITYA_ORG MENU",
+            loc = "TrnDravix MENU",
             UIKey = "Setting_Page_Privacy",
             Category = {
                 {
@@ -3187,11 +2943,6 @@ _G.InitModMenuTab = function()
                     Key = "ModMenu_CustomPref",
                     loc = "CUSTOM - PREFERENCES",
                     Stack = CustomPrefStack
-                },
-                {
-                    Key = "ModMenu_CustomPrefV2",
-                    loc = "CUSTOM - PREFERENCES V2",
-                    Stack = CustomPrefV2Stack
                 },
                 {
                     Key = "ModMenu_Memory",
