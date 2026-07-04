@@ -2666,7 +2666,7 @@ _G.InitModMenuTab = function()
             { UI = AliasMap.Title, Text = "--- ESP NAME COLORS ---" },
             {
                 Key = "ModMenu_GreenColor",
-                UI = AliasMap.Switcher,
+                UI = AliasMap.TitleSwitcher,
                 Text = "GREEN (Visible)",
                 GetFunc = function() return _G.Mod_Chams_GreenEnabled or false end,
                 SetFunc = function(_, value)
@@ -2719,7 +2719,7 @@ _G.InitModMenuTab = function()
             },
             {
                 Key = "ModMenu_YellowColor",
-                UI = AliasMap.Switcher,
+                UI = AliasMap.TitleSwitcher,
                 Text = "YELLOW (Hidden)",
                 GetFunc = function() return _G.Mod_Chams_YellowEnabled or false end,
                 SetFunc = function(_, value)
@@ -2775,7 +2775,7 @@ _G.InitModMenuTab = function()
             { UI = AliasMap.Title, Text = "--- WALLHACK COLORS ---" },
             {
                 Key = "WH_VisibleColor",
-                UI = AliasMap.Switcher,
+                UI = AliasMap.TitleSwitcher,
                 Text = "Visible Color",
                 SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
                 SwitcherValue = {1,2,3,4,5,6,7},
@@ -2789,7 +2789,7 @@ _G.InitModMenuTab = function()
             },
             {
                 Key = "WH_InvisibleColor",
-                UI = AliasMap.Switcher,
+                UI = AliasMap.TitleSwitcher,
                 Text = "Invisible Color",
                 SwitcherText = {"Red","White","Yellow","Green","Cyan","Blue","Purple"},
                 SwitcherValue = {1,2,3,4,5,6,7},
