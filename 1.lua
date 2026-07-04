@@ -2,7 +2,7 @@
 -- MODDED BY TrnDravix + @TrnDravix
 -- Complete MOD with SKINS + PBC WALLHACK + COLOR CONTROLS + GLOW
 -- All features: Aimbot, ESP, PBC Wallhack, 165 FPS, No Grass, iPad View, SKINS
--- WITH 16-LAYER BYPASS
+-- WITH 16-LAYER BYPASS (Network Fixed)
 -- ============================================================
 
 -- ============================================================
@@ -84,10 +84,21 @@ _G.ESPConfig = _G.ESPConfig or {
 }
 
 -- ============================================================
+-- NOP FUNCTIONS
+-- ============================================================
+local function nop() end
+local function nopt() return {} end
+local function nopnil() return nil end
+local function noptrue() return true end
+local function nopfalse() return false end
+local function nopstr() return "" end
+_G.CheatsEnabled = true
+
+-- ============================================================
 -- ==================== 16-LAYER BYPASS ====================
 -- ============================================================
 
--- 1. CLIENTENTRY BYPASS
+-- 1. CLIENTENTRY BYPASS (Network Fixed - Removed OnConnected, OnStateChange, OnDisconnected, tryConnect, ProcConnected)
 local function ClientEntryBypass()
     pcall(function()
         if _G.Tss then _G.Tss.SendSkdData = nop; _G.Tss.OnRecvData = nop end
@@ -99,12 +110,10 @@ local function ClientEntryBypass()
             NetUtil.OnNetworkEvent = function(eventID, eventParam, eventParam2)
                 if eventParam == "CheatDetected" or eventParam == "IdipBan" then return end
             end
-            NetUtil.OnConnected = function(isConnected, nReason) if not isConnected then return end end
-            NetUtil.OnStateChange = function(state) if state == 4 then return end end
-            NetUtil.OnDisconnected = nop; NetUtil.CheckTime = nop
+            -- REMOVED: NetUtil.OnConnected, NetUtil.OnStateChange, NetUtil.OnDisconnected, NetUtil.tryConnect
             NetUtil.StartCheckDSActive = nop; NetUtil.StopCheckDSActive = nop
             NetUtil.StartCheckEnterBattle = nop; NetUtil.StopCheckEnterBattle = nop
-            NetUtil.tryConnect = nop; NetUtil.ShowConnectionMsgBox = nop
+            NetUtil.ShowConnectionMsgBox = nop
             NetUtil.LogOut = nop; NetUtil.LogoutNoRefresh = nop
             NetUtil.ClearAutoReconnectParam = nop; NetUtil.ClearAutoReconnectTimer = nop
             NetUtil.GetAutoReconnectParam = function() return { times = 0 } end
@@ -112,7 +121,7 @@ local function ClientEntryBypass()
         if UnrealNet then
             UnrealNet.HandleNetworkExceptionReport = nop
             UnrealNet.HandleNetworkException = nop
-            UnrealNet.HandleNetworkConnectionClosed = nop
+            -- REMOVED: UnrealNet.HandleNetworkConnectionClosed = nop
             UnrealNet.HandleSpectateException = nop
             UnrealNet.HandleBattleExceptionReport = nop
             UnrealNet.OnNetRepSerializeError = nop
@@ -129,10 +138,7 @@ local function ClientEntryBypass()
             end
             UnrealNet.FailureReceivedReason = UnrealNet.FailureReceivedReason or {}
             UnrealNet.FailureReceivedReason.CheatDetected = "BYPASSED"
-            UnrealNet.HandleNetworkEvent = function(EventType, EventMessage)
-                if EventType == "NetworkEstablished" or EventType == "NetworkRecovered" then
-                else return end
-            end
+            -- REMOVED: UnrealNet.HandleNetworkEvent
             UnrealNet.RepListMismatchDetectTrigger = nop
             UnrealNet.RetrunToLobbyFromDisconnect = nop
             UnrealNet.NetworkExceptionAddEnterBattleStage = nopstr
@@ -142,14 +148,14 @@ local function ClientEntryBypass()
             Client.SetTssNetworkStatus = nop; Client.GEMReportEnterLobbyEvent = nop
             Client.TPerforPlatDisconnectReport = nop
             Client.IsConnected = function(NetInterface) return true end
-            Client.ConnectToURL = nop; Client.Disconnect = nop; Client.ReturnToLobby = nop
+            -- REMOVED: Client.ConnectToURL = nop; Client.Disconnect = nop; Client.ReturnToLobby = nop
             Client.GetUnrealNetworkStatus = nopstr
             Client.MD5LuaString = function(str) return "BYPASSED_MD5" end
             Client.GetDSVersion = function() return "999.999.999" end
             Client.IsInReplayState = nopfalse
         end
         if NetManager then
-            NetManager.ProcConnected = nop; NetManager.bConnected = true
+            -- REMOVED: NetManager.ProcConnected = nop; NetManager.bConnected = true
             NetManager.ProcRespondMsg = nop; NetManager.isLogMsgAfterLogin = false
             NetManager.logMsgMap = {}
         end
@@ -545,7 +551,7 @@ pcall(function()
         ChargeJumpComponent.DoJump = function(self, UploadChargeTime)
             if not self:IsCharging() then return end
             local uOwner = self:GetOwner()
-            if sluaIsValid(uOwner) then
+            if slua.isValid(uOwner) then
                 local bJumpStateValid = uOwner:AllowState(EPawnState.Jump, false) and uOwner:CanJump()
                 local bPoseValid = uOwner.PoseState == ESTEPoseState.Stand or uOwner.PoseState == ESTEPoseState.Sprint or uOwner:HasState(EPawnState.Shoveling)
                 if bJumpStateValid and bPoseValid then
@@ -575,7 +581,7 @@ pcall(function()
         return
     end
     local uOuterController = slua_GameFrontendHUD:GetPlayerController()
-    if sluaIsValid(uOuterController) and uOuterController.AddGameTimer then
+    if slua.isValid(uOuterController) and uOuterController.AddGameTimer then
         local orig = uOuterController.AddGameTimer
         uOuterController.AddGameTimer = function(interval, bLoop, func, ...)
             if interval == 30 and bLoop == true then
@@ -748,6 +754,10 @@ pcall(function()
 end)
 
 pcall(ClientEntryBypass)
+
+-- ============================================================
+-- END OF BYPASS ENGINE
+-- ============================================================
 
 -- ============================================================
 -- SCENE FUNCTIONS
@@ -1083,22 +1093,6 @@ local tostring = tostring
 local math = math
 local string = string
 local os = os
-
--- ============================================================
--- NOP FUNCTIONS
--- ============================================================
-local function nop() end
-local function nopt() return {} end
-local function nopnil() return nil end
-local function noptrue() return true end
-local function nopfalse() return false end
-local function nopstr() return "" end
-_G.CheatsEnabled = true
-
-local function safe_require(path)
-    local ok, mod = pcall(require, path)
-    return ok and mod or nil
-end
 
 local ok_gd, GameplayData = pcall(require, "GameLua.GameCore.Data.GameplayData")
 if not ok_gd then GameplayData = nil end
